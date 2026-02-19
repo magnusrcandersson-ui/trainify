@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainify Pro - Träningslogg</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            background: #0f1419;
+            color: #e1e8ed;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        
+        /* Auth Screen */
+        #authScreen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #authScreen.hidden { display: none; }
+        
+        .auth-box {
+            background: #1a1f28;
+            border: 1px solid #2d3748;
+            border-radius: 16px;
+            padding: 48px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            background: #151a23;
+            padding: 6px;
+            border-radius: 12px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            color: #718096;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .form { display: none; }
+        .form.active { display: block; }
+        
+        .form-group { margin-bottom: 20px; }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            background: #151a23;
+            border: 1px solid #2d3748;
+            border-radius: 10px;
+            color: #e1e8ed;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover { transform: translateY(-1px); }
+        
+        .btn-secondary {
+            background: #2d3748;
+            color: #e1e8ed;
+        }
+        
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+        
+        .error { color: #fc8181; font-size: 14px; margin-top: 5px; }
+        
+        /* App */
+        #app { display: none; }
+        #app.active { display: block; }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1f28 0%, #151a23 100%);
+            border: 1px solid #2d3748;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .logout-btn {
+            padding: 10px 20px;
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            color: #e1e8ed;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background: #4a5568;
+            border-color: #667eea;
+        }
+        
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            background: #1a1f28;
+            padding: 8px;
+            border-radius: 14px;
+            border: 1px solid #2d3748;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 14px 24px;
+            background: transparent;
+            border: none;
+            color: #718096;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        
+        .nav-tab:hover {
+            background: #151a23;
+            color: #e1e8ed;
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .view {
+            display: none;
+        }
+        
+        .view.active {
+            display: block;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #1a1f28 0%, #151a23 100%);
+            border: 1px solid #2d3748;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .card h2 {
+            margin-bottom: 24px;
+            font-size: 18px;
+            color: #e1e8ed;
+            font-weight: 700;
+        }
+        
+        .workout-item {
+            background: #0f1419;
+            border: 1px solid #2d3748;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            transition: all 0.2s;
+        }
+        
+        .workout-item:hover {
+            border-color: #4a5568;
+            transform: translateY(-2px);
+        }
+        
+        .workout-info h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #e1e8ed;
+        }
+        
+        .workout-meta {
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+        
+        .workout-notes {
+            margin-top: 8px;
+            padding: 10px;
+            background: #151a23;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #a0aec0;
+        }
+        
+        .delete-btn {
+            padding: 8px 16px;
+            background: #742a2a;
+            color: #feb2b2;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .delete-btn:hover { 
+            background: #9b2c2c;
+            color: white;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge.strength {
+            background: rgba(102, 126, 234, 0.2);
+            color: #a3bffa;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+        
+        .badge.running {
+            background: rgba(72, 187, 120, 0.2);
+            color: #9ae6b4;
+            border: 1px solid rgba(72, 187, 120, 0.3);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            border: 1px solid #4a5568;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+        
+        /* Compact Form Layout */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .form-row .form-group {
+            margin-bottom: 0;
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="authScreen">
+        <div class="auth-box">
+            <div class="logo">⚡ Trainify PRO</div>
+            
+            <div class="tabs">
+                <div class="tab active" id="tab-login">Logga in</div>
+                <div class="tab" id="tab-register">Registrera</div>
+            </div>
+            
+            <form class="form active" id="loginForm">
+                <div class="form-group">
+                    <label class="form-label">Användarnamn</label>
+                    <input type="text" class="form-input" id="login-username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Lösenord</label>
+                    <input type="password" class="form-input" id="login-password">
+                </div>
+                <div id="login-error" class="error"></div>
+                <button type="submit" class="btn">Logga in</button>
+            </form>
+            
+            <form class="form" id="registerForm">
+                <div class="form-group">
+                    <label class="form-label">Användarnamn</label>
+                    <input type="text" class="form-input" id="reg-username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Lösenord</label>
+                    <input type="password" class="form-input" id="reg-password">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bekräfta lösenord</label>
+                    <input type="password" class="form-input" id="reg-confirm">
+                </div>
+                <div id="reg-error" class="error"></div>
+                <button type="submit" class="btn">Skapa konto</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Main App -->
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>Trainify Pro - <span id="username"></span></h1>
+                <button class="logout-btn" id="logoutBtn">Logga ut</button>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" id="nav-running">🏃 Löpning</button>
+                <button class="nav-tab" id="nav-strength">🏋️ Styrketräning</button>
+                <button class="nav-tab" id="nav-golf">⛳ Golf</button>
+            </div>
+            
+            <!-- Running View -->
+            <div id="runningView" class="view active">
+                <!-- Stats -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalDistance">0</div>
+                        <div class="stat-label">Total distans (km)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalRuns">0</div>
+                        <div class="stat-label">Antal löppass</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avgPace">-</div>
+                        <div class="stat-label">Snitt tempo (min/km)</div>
+                    </div>
+                </div>
+                
+                <!-- Add Running Form -->
+                <div class="card">
+                    <h2>Logga löppass</h2>
+                    <form id="addRunForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Datum</label>
+                                <input type="date" class="form-input" id="runDate">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Sträcka (km)</label>
+                                <input type="number" class="form-input" id="runDistance" step="0.1" placeholder="5.0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Tid (minuter)</label>
+                                <input type="number" class="form-input" id="runTime" placeholder="30">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Medelpuls (bpm)</label>
+                                <input type="number" class="form-input" id="runHeartRate" placeholder="145">
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn">Lägg till löppass</button>
+                    </form>
+                </div>
+                
+                <!-- Running List -->
+                <div class="card">
+                    <h2>Mina löppass</h2>
+                    <div id="runningList"></div>
+                </div>
+            </div>
+            
+            <!-- Strength View -->
+            <div id="strengthView" class="view">
+                <!-- Stats -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalStrengthTime">0</div>
+                        <div class="stat-label">Total tid (min)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalStrengthSessions">0</div>
+                        <div class="stat-label">Antal pass</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avgMood">-</div>
+                        <div class="stat-label">Snitt mående</div>
+                    </div>
+                </div>
+                
+                <!-- Add Strength Form -->
+                <div class="card">
+                    <h2>Logga styrketräning</h2>
+                    <form id="addStrengthForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Datum</label>
+                                <input type="date" class="form-input" id="strengthDate">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Träningstid (minuter)</label>
+                                <input type="number" class="form-input" id="strengthTime" placeholder="60">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Hur mår jag i kroppen? (1-10)</label>
+                            <input type="range" class="form-input" id="strengthMood" min="1" max="10" value="5" style="padding: 0;">
+                            <div style="text-align: center; margin-top: 8px; font-size: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;" id="moodValue">5</div>
+                            <div style="text-align: center; color: #718096; font-size: 13px;">1 = Dåligt • 10 = Fantastiskt</div>
+                        </div>
+                        
+                        <button type="submit" class="btn">Lägg till styrketräning</button>
+                    </form>
+                </div>
+                
+                <!-- Strength List -->
+                <div class="card">
+                    <h2>Mina styrkepass</h2>
+                    <div id="strengthList"></div>
+                </div>
+            </div>
+            
+            <!-- Golf View -->
+            <div id="golfView" class="view">
+                <!-- Stats -->
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalRounds">0</div>
+                        <div class="stat-label">Antal rundor</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avgScore">-</div>
+                        <div class="stat-label">Snitt slag</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="bestScore">-</div>
+                        <div class="stat-label">Bästa runda</div>
+                    </div>
+                </div>
+                
+                <!-- Add Golf Round Form -->
+                <div class="card">
+                    <h2>Logga golfrunda</h2>
+                    <form id="addGolfForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Datum</label>
+                                <input type="date" class="form-input" id="golfDate">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Bana</label>
+                                <input type="text" class="form-input" id="golfCourse" placeholder="T.ex. Halmstad GK">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Antal hål</label>
+                                <select class="form-select" id="golfHoles">
+                                    <option value="9">9 hål</option>
+                                    <option value="18">18 hål</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #0f1419; padding: 16px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #2d3748;">
+                            <h3 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; font-size: 16px;">Scorekort</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Eagle 🦅</label>
+                                    <input type="number" class="form-input" id="golfEagle" value="0" min="0">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Birdie 🐦</label>
+                                    <input type="number" class="form-input" id="golfBirdie" value="0" min="0">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Par ⚪</label>
+                                    <input type="number" class="form-input" id="golfPar" value="0" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Bogey ⚠️</label>
+                                    <input type="number" class="form-input" id="golfBogey" value="0" min="0">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Dubbelbogey ❌</label>
+                                    <input type="number" class="form-input" id="golfDoubleBogey" value="0" min="0">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Totalt antal slag</label>
+                            <input type="number" class="form-input" id="golfTotalStrokes" placeholder="72">
+                        </div>
+                        
+                        <button type="submit" class="btn">Lägg till golfrunda</button>
+                    </form>
+                </div>
+                
+                <!-- Golf Rounds List -->
+                <div class="card">
+                    <h2>Mina golfrundor</h2>
+                    <div id="golfList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        let users = {};
+        let currentUser = null;
+        
+        // Load from localStorage
+        try {
+            users = JSON.parse(localStorage.getItem('trainify_users')) || {};
+        } catch (e) {
+            console.error('Error loading users:', e);
+        }
+        
+        // Elements
+        const authScreen = document.getElementById('authScreen');
+        const app = document.getElementById('app');
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const addWorkoutForm = document.getElementById('addWorkoutForm');
+        
+        // Set today's date
+        document.getElementById('runDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('strengthDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('golfDate').value = new Date().toISOString().split('T')[0];
+        
+        // Mood slider update
+        document.getElementById('strengthMood').addEventListener('input', (e) => {
+            document.getElementById('moodValue').textContent = e.target.value;
+        });
+        
+        // Navigation tabs
+        document.getElementById('nav-running').addEventListener('click', () => switchTab('running'));
+        document.getElementById('nav-strength').addEventListener('click', () => switchTab('strength'));
+        document.getElementById('nav-golf').addEventListener('click', () => switchTab('golf'));
+        
+        function switchTab(tab) {
+            // Update nav buttons
+            document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('nav-' + tab).classList.add('active');
+            
+            // Update views
+            document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
+            document.getElementById(tab + 'View').classList.add('active');
+        }
+        
+        // Tab switching
+        tabLogin.addEventListener('click', () => {
+            tabLogin.classList.add('active');
+            tabRegister.classList.remove('active');
+            loginForm.classList.add('active');
+            registerForm.classList.remove('active');
+        });
+        
+        tabRegister.addEventListener('click', () => {
+            tabRegister.classList.add('active');
+            tabLogin.classList.remove('active');
+            registerForm.classList.add('active');
+            loginForm.classList.remove('active');
+        });
+        
+        // Register
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const confirm = document.getElementById('reg-confirm').value;
+            const errorEl = document.getElementById('reg-error');
+            
+            errorEl.textContent = '';
+            
+            if (!username || !password) {
+                errorEl.textContent = 'Fyll i alla fält';
+                return;
+            }
+            
+            if (password !== confirm) {
+                errorEl.textContent = 'Lösenorden matchar inte';
+                return;
+            }
+            
+            if (users[username]) {
+                errorEl.textContent = 'Användarnamnet finns redan';
+                return;
+            }
+            
+            users[username] = {
+                password: password,
+                running: [],
+                strength: [],
+                golf: []
+            };
+            
+            localStorage.setItem('trainify_users', JSON.stringify(users));
+            
+            document.getElementById('reg-username').value = '';
+            document.getElementById('reg-password').value = '';
+            document.getElementById('reg-confirm').value = '';
+            
+            alert('Konto skapat! Du kan nu logga in.');
+            tabLogin.click();
+        });
+        
+        // Login
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+            
+            errorEl.textContent = '';
+            
+            if (!username || !password) {
+                errorEl.textContent = 'Fyll i alla fält';
+                return;
+            }
+            
+            if (!users[username]) {
+                errorEl.textContent = 'Användarnamnet finns inte';
+                return;
+            }
+            
+            if (users[username].password !== password) {
+                errorEl.textContent = 'Fel lösenord';
+                return;
+            }
+            
+            currentUser = username;
+            localStorage.setItem('trainify_currentUser', username);
+            
+            showApp();
+        });
+        
+        // Show app
+        function showApp() {
+            authScreen.classList.add('hidden');
+            app.classList.add('active');
+            document.getElementById('username').textContent = currentUser;
+            renderRunning();
+            updateRunningStats();
+        }
+        
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            currentUser = null;
+            localStorage.removeItem('trainify_currentUser');
+            authScreen.classList.remove('hidden');
+            app.classList.remove('active');
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+        });
+        
+        // Add running session
+        const addRunForm = document.getElementById('addRunForm');
+        if (addRunForm) {
+            addRunForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const run = {
+                    id: Date.now(),
+                    date: document.getElementById('runDate').value,
+                    distance: parseFloat(document.getElementById('runDistance').value),
+                    time: parseInt(document.getElementById('runTime').value),
+                    heartRate: parseInt(document.getElementById('runHeartRate').value) || null
+                };
+                
+                if (!run.distance || !run.time) {
+                    alert('Fyll i sträcka och tid');
+                    return;
+                }
+                
+                if (!users[currentUser].running) {
+                    users[currentUser].running = [];
+                }
+                
+                users[currentUser].running.push(run);
+                localStorage.setItem('trainify_users', JSON.stringify(users));
+                
+                // Clear form
+                document.getElementById('runDistance').value = '';
+                document.getElementById('runTime').value = '';
+                document.getElementById('runHeartRate').value = '';
+                document.getElementById('runDate').value = new Date().toISOString().split('T')[0];
+                
+                renderRunning();
+                updateRunningStats();
+            });
+        }
+        
+        // Add strength session
+        const addStrengthForm = document.getElementById('addStrengthForm');
+        if (addStrengthForm) {
+            addStrengthForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const strength = {
+                    id: Date.now(),
+                    date: document.getElementById('strengthDate').value,
+                    time: parseInt(document.getElementById('strengthTime').value),
+                    mood: parseInt(document.getElementById('strengthMood').value)
+                };
+                
+                if (!strength.time) {
+                    alert('Fyll i träningstid');
+                    return;
+                }
+                
+                if (!users[currentUser].strength) {
+                    users[currentUser].strength = [];
+                }
+                
+                users[currentUser].strength.push(strength);
+                localStorage.setItem('trainify_users', JSON.stringify(users));
+                
+                // Clear form
+                document.getElementById('strengthTime').value = '';
+                document.getElementById('strengthMood').value = '5';
+                document.getElementById('moodValue').textContent = '5';
+                document.getElementById('strengthDate').value = new Date().toISOString().split('T')[0];
+                
+                renderStrength();
+                updateStrengthStats();
+            });
+        }
+        
+        // Add golf round
+        const addGolfForm = document.getElementById('addGolfForm');
+        if (addGolfForm) {
+            addGolfForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const golf = {
+                    id: Date.now(),
+                    date: document.getElementById('golfDate').value,
+                    course: document.getElementById('golfCourse').value,
+                    holes: parseInt(document.getElementById('golfHoles').value),
+                    eagle: parseInt(document.getElementById('golfEagle').value) || 0,
+                    birdie: parseInt(document.getElementById('golfBirdie').value) || 0,
+                    par: parseInt(document.getElementById('golfPar').value) || 0,
+                    bogey: parseInt(document.getElementById('golfBogey').value) || 0,
+                    doubleBogey: parseInt(document.getElementById('golfDoubleBogey').value) || 0,
+                    totalStrokes: parseInt(document.getElementById('golfTotalStrokes').value)
+                };
+                
+                if (!golf.course || !golf.totalStrokes) {
+                    alert('Fyll i bana och totalt antal slag');
+                    return;
+                }
+                
+                if (!users[currentUser].golf) {
+                    users[currentUser].golf = [];
+                }
+                
+                users[currentUser].golf.push(golf);
+                localStorage.setItem('trainify_users', JSON.stringify(users));
+                
+                // Clear form
+                document.getElementById('golfCourse').value = '';
+                document.getElementById('golfEagle').value = '0';
+                document.getElementById('golfBirdie').value = '0';
+                document.getElementById('golfPar').value = '0';
+                document.getElementById('golfBogey').value = '0';
+                document.getElementById('golfDoubleBogey').value = '0';
+                document.getElementById('golfTotalStrokes').value = '';
+                document.getElementById('golfDate').value = new Date().toISOString().split('T')[0];
+                
+                renderGolf();
+                updateGolfStats();
+            });
+        }
+        
+        // Render running sessions
+        function renderRunning() {
+            const runs = users[currentUser].running || [];
+            const sorted = [...runs].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            const list = document.getElementById('runningList');
+            
+            if (sorted.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 40px;">Inga löppass registrerade än. Lägg till ditt första pass ovan! 🏃</p>';
+                return;
+            }
+            
+            list.innerHTML = sorted.map(r => {
+                const pace = (r.time / r.distance).toFixed(2);
+                return `
+                    <div class="workout-item">
+                        <div class="workout-info">
+                            <h3><span class="badge running">Löpning</span> ${r.distance} km</h3>
+                            <div class="workout-meta">📅 ${formatDate(r.date)}</div>
+                            <div class="workout-notes">
+                                ⏱️ ${r.time} min • 
+                                🏃 ${pace} min/km • 
+                                ${r.heartRate ? '❤️ ' + r.heartRate + ' bpm' : ''}
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteRun(${r.id})">Ta bort</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Delete running session
+        function deleteRun(id) {
+            if (confirm('Är du säker på att du vill ta bort detta löppass?')) {
+                users[currentUser].running = users[currentUser].running.filter(r => r.id !== id);
+                localStorage.setItem('trainify_users', JSON.stringify(users));
+                renderRunning();
+                updateRunningStats();
+            }
+        }
+        
+        // Update running stats
+        function updateRunningStats() {
+            const runs = users[currentUser].running || [];
+            
+            const totalDistance = runs.reduce((sum, r) => sum + r.distance, 0);
+            const totalTime = runs.reduce((sum, r) => sum + r.time, 0);
+            const avgPace = runs.length > 0 ? (totalTime / totalDistance).toFixed(2) : '-';
+            
+            document.getElementById('totalDistance').textContent = totalDistance.toFixed(1);
+            document.getElementById('totalRuns').textContent = runs.length;
+            document.getElementById('avgPace').textContent = avgPace;
+        }
+        
+        // Render strength sessions
+        function renderStrength() {
+            const sessions = users[currentUser].strength || [];
+            const sorted = [...sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            const list = document.getElementById('strengthList');
+            
+            if (sorted.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 40px;">Inga styrkepass registrerade än. Lägg till ditt första pass ovan! 🏋️</p>';
+                return;
+            }
+            
+            list.innerHTML = sorted.map(s => {
+                const moodEmoji = s.mood >= 8 ? '😄' : s.mood >= 6 ? '🙂' : s.mood >= 4 ? '😐' : '😔';
+                return `
+                    <div class="workout-item">
+                        <div class="workout-info">
+                            <h3><span class="badge strength">Styrka</span> ${s.time} minuter</h3>
+                            <div class="workout-meta">📅 ${formatDate(s.date)}</div>
+                            <div class="workout-notes">
+                                ${moodEmoji} Mående: ${s.mood}/10
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteStrength(${s.id})">Ta bort</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Delete strength session
+        function deleteStrength(id) {
+            if (confirm('Är du säker på att du vill ta bort detta pass?')) {
+                users[currentUser].strength = users[currentUser].strength.filter(s => s.id !== id);
+                localStorage.setItem('trainify_users', JSON.stringify(users));
+                renderStrength();
+                updateStrengthStats();
+            }
+        }
+        
+        // Update strength stats
+        function updateStrengthStats() {
+            const sessions = users[currentUser].strength || [];
+            
+            const totalTime = sessions.reduce((sum, s) => sum + s.time, 0);
+            const totalMood = sessions.reduce((sum, s) => sum + s.mood, 0);
+            
+            const avgMood = sessions.length > 0 ? (totalMood / sessions.length).toFixed(1) : '-';
+            
+            document.getElementById('totalStrengthTime').textContent = totalTime;
+            document.getElementById('totalStrengthSessions').textContent = sessions.length;
+            document.getElementById('avgMood').textContent = avgMood;
+        }
+        
+        // Render golf rounds
+        function renderGolf() {
+            const rounds = users[currentUser].golf || [];
+            const sorted = [...rounds].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            const list = document.getElementById('golfList');
+            
+            if (sorted.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 40px;">Inga golfrundor registrerade än. Lägg till din första runda ovan! ⛳</p>';
+                return;
+            }
+            
+            list.innerHTML = sorted.map(g => {
+                return `
+                    <div class="workout-item">
+                        <div class="workout-info">
+                            <h3><span class="badge running">${g.course}</span> ${g.holes} hål</h3>
+                            <div class="workout-meta">📅 ${formatDate(g.date)}</div>
+                            <div class="workout-notes">
+                                🏌️ Totalt: ${g.totalStrokes} slag<br>
+                                🦅 ${g.eagle} • 🐦 ${g.birdie} • ⚪ ${g.par} • ⚠️ ${g.bogey} • ❌ ${g.doubleBogey}
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteGolf(${g.id})">Ta bort</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Delete golf round
+        function deleteGolf(id) {
+            if (confirm('Är du säker på att du vill ta bort denna golfrunda?')) {
+                users[currentUser].golf = users[currentUser].golf.filter(g => g.id !== id);
+                localStorage.setItem('trainify_users', JSON.stringify(users));
+                renderGolf();
+                updateGolfStats();
+            }
+        }
+        
+        // Update golf stats
+        function updateGolfStats() {
+            const rounds = users[currentUser].golf || [];
+            
+            const totalStrokes = rounds.reduce((sum, g) => sum + g.totalStrokes, 0);
+            const avgScore = rounds.length > 0 ? (totalStrokes / rounds.length).toFixed(1) : '-';
+            const bestScore = rounds.length > 0 ? Math.min(...rounds.map(g => g.totalStrokes)) : '-';
+            
+            document.getElementById('totalRounds').textContent = rounds.length;
+            document.getElementById('avgScore').textContent = avgScore;
+            document.getElementById('bestScore').textContent = bestScore;
+        }
+        
+        // Helper functions
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const days = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör'];
+            const months = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+            return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+        }
+        
+        // Auto-login
+        const savedUser = localStorage.getItem('trainify_currentUser');
+        if (savedUser && users[savedUser]) {
+            currentUser = savedUser;
+            showApp();
+        }
+    </script>
+</body>
+</html>
