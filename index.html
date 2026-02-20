@@ -8,111 +8,467 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    :root{
+      --bg: #0b1020;
+      --card: rgba(255,255,255,0.08);
+      --card2: rgba(255,255,255,0.06);
+      --stroke: rgba(255,255,255,0.12);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --muted2: rgba(255,255,255,0.55);
+      --shadow: 0 18px 50px rgba(0,0,0,0.35);
+      --shadow2: 0 10px 30px rgba(0,0,0,0.28);
+      --radius: 18px;
+      --radius2: 14px;
+      --accent: #7c5cff;
+      --accent2: #22c55e;
+      --danger: #ff4d6d;
+      --focus: 0 0 0 4px rgba(124,92,255,0.25);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f4f6f9;
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 15% 10%, rgba(124,92,255,0.22), transparent 60%),
+        radial-gradient(900px 700px at 85% 25%, rgba(34,197,94,0.16), transparent 55%),
+        radial-gradient(900px 700px at 50% 95%, rgba(59,130,246,0.14), transparent 55%),
+        linear-gradient(180deg, #070a14 0%, #0b1020 55%, #070a14 100%);
     }
 
-    h1 {
-      margin-bottom: 20px;
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
     }
 
-    form {
-      background: white;
-      padding: 20px;
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
       border-radius: 14px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+      background:
+        radial-gradient(16px 16px at 30% 30%, rgba(255,255,255,0.7), transparent 60%),
+        linear-gradient(135deg, rgba(124,92,255,1) 0%, rgba(59,130,246,1) 45%, rgba(34,197,94,1) 110%);
+      box-shadow: var(--shadow2);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .titleblock h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .titleblock p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 999px;
+      background: var(--accent2);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.18);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 980px){
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.06));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .cardHeader {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.03);
+    }
+    .cardHeader h2 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.80);
+    }
+    .cardHeader p{
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .cardBody { padding: 16px; }
+
+    .formGrid {
       display: grid;
       gap: 12px;
-      margin-bottom: 30px;
     }
 
-    input, button {
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
+    .row2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 520px){
+      .row2 { grid-template-columns: 1fr; }
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.78);
+    }
+
+    .input, .select, .btn {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(8,12,22,0.55);
+      color: var(--text);
+      outline: none;
+      transition: 120ms ease;
       font-size: 14px;
     }
 
-    button {
+    .input::placeholder { color: rgba(255,255,255,0.40); }
+    .input:focus, .select:focus {
+      box-shadow: var(--focus);
+      border-color: rgba(124,92,255,0.50);
+    }
+
+    .timeRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+    .timeRow .mini {
+      display: grid;
+      gap: 6px;
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted2);
+      margin-top: 2px;
+    }
+
+    .btnPrimary {
+      background: linear-gradient(135deg, rgba(124,92,255,1), rgba(59,130,246,1));
+      border: 1px solid rgba(255,255,255,0.18);
+      font-weight: 700;
       cursor: pointer;
-      background: #111;
-      color: white;
-      border: none;
+      box-shadow: 0 14px 30px rgba(124,92,255,0.18);
+    }
+    .btnPrimary:hover { transform: translateY(-1px); }
+    .btnPrimary:active { transform: translateY(0px); }
+
+    .msg {
+      margin-top: 10px;
+      font-size: 13px;
       font-weight: 600;
+      min-height: 18px;
     }
 
-    button:hover {
-      opacity: 0.9;
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.03);
+    }
+    .toolbarLeft {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
-    .activity {
-      background: white;
-      padding: 16px;
-      border-radius: 14px;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    .search {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
     }
 
-    .small {
-      opacity: 0.7;
-      font-size: 0.9em;
+    .btnGhost {
+      width: auto;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.86);
+      cursor: pointer;
+      font-weight: 700;
+      transition: 120ms ease;
+    }
+    .btnGhost:hover { background: rgba(255,255,255,0.09); transform: translateY(-1px); }
+    .btnGhost:active { transform: translateY(0); }
+
+    .list {
+      padding: 14px 16px 18px;
     }
 
-    #msg {
-      font-weight: 600;
-      margin-top: 4px;
+    .empty {
+      padding: 18px;
+      border-radius: var(--radius2);
+      border: 1px dashed rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius2);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      margin-bottom: 10px;
+    }
+
+    .itemTitle {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .itemTitle strong {
+      font-size: 14px;
+      letter-spacing: -0.01em;
+    }
+    .badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(8,12,22,0.45);
+      color: rgba(255,255,255,0.80);
+    }
+
+    .meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.78);
+      font-size: 12px;
+    }
+
+    .notes {
+      margin-top: 10px;
+      color: rgba(255,255,255,0.76);
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(8,12,22,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .rightCol {
+      text-align: right;
+      color: var(--muted2);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .footer {
+      margin-top: 14px;
+      color: rgba(255,255,255,0.50);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .srOnly {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
     }
   </style>
 </head>
+
 <body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="titleblock">
+          <h1>Trainify</h1>
+          <p>Din träningslogg — manuellt nu, import från COROS senare.</p>
+        </div>
+      </div>
+      <div class="pill" title="Status">
+        <span class="dot"></span>
+        <span>Live mot Supabase</span>
+      </div>
+    </div>
 
-  <h1>Trainify 💪</h1>
+    <div class="grid">
+      <!-- FORM -->
+      <section class="card">
+        <div class="cardHeader">
+          <h2>Lägg till pass</h2>
+          <p>Registrera pass snabbt. Tid anges i <strong>timmar</strong> och <strong>minuter</strong>.</p>
+        </div>
+        <div class="cardBody">
+          <form id="activity-form" class="formGrid" autocomplete="off">
+            <label>
+              Datum & tid
+              <input class="input" type="datetime-local" id="start_time" required />
+            </label>
 
-  <form id="activity-form">
-    <label>
-      Datum & tid
-      <input type="datetime-local" id="start_time" required />
-    </label>
+            <label>
+              Sport
+              <input class="input" type="text" id="sport" placeholder="Run, Bike, Swim..." required />
+            </label>
 
-    <label>
-      Sport
-      <input type="text" id="sport" placeholder="Run, Bike..." required />
-    </label>
+            <label>
+              Namn (valfritt)
+              <input class="input" type="text" id="name" placeholder="t.ex. Intervaller, Lugn distans" />
+            </label>
 
-    <label>
-      Namn (valfritt)
-      <input type="text" id="name" />
-    </label>
+            <div class="row2">
+              <div class="timeRow">
+                <div class="mini">
+                  <label>
+                    Tid — timmar
+                    <input class="input" type="number" id="duration_h" min="0" placeholder="0" />
+                  </label>
+                </div>
+                <div class="mini">
+                  <label>
+                    Tid — minuter
+                    <input class="input" type="number" id="duration_min" min="0" max="59" placeholder="30" />
+                  </label>
+                </div>
+              </div>
 
-    <label>
-      Tid (sekunder)
-      <input type="number" id="duration_s" min="0" />
-    </label>
+              <label>
+                Distans (km) (valfritt)
+                <input class="input" type="number" id="distance_km" min="0" step="0.01" placeholder="t.ex. 10.00" />
+              </label>
+            </div>
 
-    <label>
-      Distans (km)
-      <input type="number" id="distance_km" min="0" step="0.01" />
-    </label>
+            <label>
+              Anteckningar (valfritt)
+              <input class="input" type="text" id="notes" placeholder="känsla, väder, skor, upplägg..." />
+              <span class="hint">Tips: Fyll i distans + tid så räknas tempo (min/km) automatiskt i listan.</span>
+            </label>
 
-    <label>
-      Anteckningar
-      <input type="text" id="notes" />
-    </label>
+            <button class="btn btnPrimary" type="submit">Spara pass</button>
+            <div id="msg" class="msg" aria-live="polite"></div>
+          </form>
+        </div>
+      </section>
 
-    <button type="submit">Spara pass</button>
-    <div id="msg"></div>
-  </form>
+      <!-- LIST -->
+      <section class="card">
+        <div class="toolbar">
+          <div class="toolbarLeft">
+            <div class="chip" id="countChip">0 pass</div>
+            <div class="chip" id="lastChip">Senast: —</div>
+          </div>
 
-  <h2>Senaste pass</h2>
-  <button onclick="loadActivities()">Uppdatera</button>
-  <div id="activities"></div>
+          <div class="search">
+            <label class="srOnly" for="filterSport">Filtrera</label>
+            <input class="input" id="filterSport" placeholder="Filtrera sport (t.ex. Run)" style="max-width: 220px;" />
+            <button class="btnGhost" id="reloadBtn" type="button">Uppdatera</button>
+          </div>
+        </div>
+
+        <div class="list">
+          <div id="activities" class="empty">Laddar…</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      Byggd för enkel loggning nu — redo för bulkimport från COROS när filen kommer.
+    </div>
+  </div>
 
   <script>
-    // Dina riktiga Supabase-nycklar
+    // Dina Supabase-värden (som du gav)
     const SUPABASE_URL = "https://pmstnkmloyipsrveqidg.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Mb-z3MZvMP_KC09dMXE-AQ_AauF362I";
 
@@ -121,48 +477,153 @@
     const form = document.getElementById("activity-form");
     const activitiesDiv = document.getElementById("activities");
     const msg = document.getElementById("msg");
+    const reloadBtn = document.getElementById("reloadBtn");
+    const filterSport = document.getElementById("filterSport");
+    const countChip = document.getElementById("countChip");
+    const lastChip = document.getElementById("lastChip");
 
     function setMessage(text, isError = false) {
-      msg.textContent = text;
-      msg.style.color = isError ? "crimson" : "green";
+      msg.textContent = text || "";
+      msg.style.color = isError ? "var(--danger)" : "var(--accent2)";
+    }
+
+    function formatDistance(meters) {
+      if (!meters || meters <= 0) return null;
+      const km = meters / 1000;
+      return `${km.toFixed(km < 10 ? 2 : 1)} km`;
+    }
+
+    function formatDuration(seconds) {
+      if (!seconds || seconds <= 0) return null;
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    }
+
+    function calcPace(duration_s, distance_m) {
+      if (!duration_s || !distance_m || distance_m <= 0) return null;
+      const secPerKm = duration_s / (distance_m / 1000);
+      if (!isFinite(secPerKm)) return null;
+      const mm = Math.floor(secPerKm / 60);
+      const ss = Math.round(secPerKm % 60).toString().padStart(2, "0");
+      return `${mm}:${ss} min/km`;
+    }
+
+    function safeText(v) {
+      // skydda mot att rå text injiceras i HTML
+      const span = document.createElement("span");
+      span.textContent = (v ?? "").toString();
+      return span.innerHTML;
+    }
+
+    function setSummary(data) {
+      const count = data.length;
+      countChip.textContent = `${count} pass`;
+      if (count > 0) {
+        const latest = new Date(data[0].start_time);
+        lastChip.textContent = `Senast: ${latest.toLocaleDateString()} ${latest.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`;
+      } else {
+        lastChip.textContent = "Senast: —";
+      }
+    }
+
+    async function fetchActivities() {
+      const sportFilter = (filterSport.value || "").trim().toLowerCase();
+
+      let q = sb
+        .from("activities")
+        .select("id,start_time,sport,name,duration_s,distance_m,notes,source")
+        .order("start_time", { ascending: false })
+        .limit(200);
+
+      // Filtrera client-side (enklast för statisk sida)
+      const { data, error } = await q;
+
+      if (error) throw error;
+
+      const filtered = (data || []).filter(a => {
+        if (!sportFilter) return true;
+        return (a.sport || "").toLowerCase().includes(sportFilter);
+      });
+
+      return filtered;
     }
 
     window.loadActivities = async function loadActivities() {
-      activitiesDiv.innerHTML = "Laddar...";
+      activitiesDiv.className = "empty";
+      activitiesDiv.innerHTML = "Laddar…";
+      setMessage("");
 
-      const { data, error } = await sb
-        .from("activities")
-        .select("*")
-        .order("start_time", { ascending: false })
-        .limit(100);
+      try {
+        const data = await fetchActivities();
+        setSummary(data);
 
-      if (error) {
+        if (!data.length) {
+          activitiesDiv.className = "empty";
+          activitiesDiv.innerHTML = `
+            <strong>Inga pass ännu.</strong><br/>
+            Lägg till ditt första pass i formuläret till vänster. När COROS-bulkimporten kommer lägger vi in allt på en gång.
+          `;
+          return;
+        }
+
+        activitiesDiv.className = "";
         activitiesDiv.innerHTML = "";
-        setMessage(error.message, true);
-        return;
+
+        data.forEach((a) => {
+          const div = document.createElement("div");
+          div.className = "item";
+
+          const when = new Date(a.start_time);
+          const whenText = `${when.toLocaleDateString()} ${when.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}`;
+
+          const dist = formatDistance(a.distance_m);
+          const dur = formatDuration(a.duration_s);
+          const pace = calcPace(a.duration_s, a.distance_m);
+
+          const name = a.name ? safeText(a.name) : "";
+          const notes = a.notes ? safeText(a.notes) : "";
+
+          div.innerHTML = `
+            <div>
+              <div class="itemTitle">
+                <strong>${whenText}</strong>
+                <span class="badge">${safeText(a.sport || "Unknown")}</span>
+                ${name ? `<span class="badge" style="opacity:.85">${name}</span>` : ``}
+              </div>
+
+              <div class="meta">
+                ${dist ? `<span>📏 ${dist}</span>` : ``}
+                ${dur ? `<span>⏱️ ${dur}</span>` : ``}
+                ${pace ? `<span>⚡ ${pace}</span>` : ``}
+                <span>🗂️ ${safeText(a.source || "manual")}</span>
+              </div>
+
+              ${notes ? `<div class="notes">${notes}</div>` : ``}
+            </div>
+
+            <div class="rightCol">
+              <div style="font-family: var(--mono);">${safeText(a.id)}</div>
+            </div>
+          `;
+
+          activitiesDiv.appendChild(div);
+        });
+
+      } catch (e) {
+        activitiesDiv.className = "empty";
+        activitiesDiv.innerHTML = "Kunde inte ladda pass.";
+        setMessage(e?.message || "Okänt fel", true);
       }
-
-      activitiesDiv.innerHTML = "";
-
-      data.forEach((a) => {
-        const div = document.createElement("div");
-        div.className = "activity";
-
-        const km = a.distance_m ? (a.distance_m / 1000).toFixed(2) : null;
-
-        div.innerHTML = `
-          <div><strong>${new Date(a.start_time).toLocaleString()}</strong> — ${a.sport}</div>
-          <div class="small">
-            ${a.name ? a.name + " — " : ""}
-            ${km ? km + " km — " : ""}
-            ${a.duration_s ? a.duration_s + " s" : ""}
-          </div>
-          ${a.notes ? `<div class="small">${a.notes}</div>` : ""}
-        `;
-
-        activitiesDiv.appendChild(div);
-      });
     };
+
+    reloadBtn.addEventListener("click", window.loadActivities);
+    filterSport.addEventListener("input", () => {
+      // liten debounce-känsla utan att bli krångligt
+      clearTimeout(window.__tfTimer);
+      window.__tfTimer = setTimeout(window.loadActivities, 180);
+    });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -171,36 +632,48 @@
       const start_time = document.getElementById("start_time").value;
       const sport = document.getElementById("sport").value.trim();
       const name = document.getElementById("name").value.trim() || null;
-      const duration_s_raw = document.getElementById("duration_s").value;
+
+      const duration_h_raw = document.getElementById("duration_h").value;
+      const duration_min_raw = document.getElementById("duration_min").value;
+
       const distance_km_raw = document.getElementById("distance_km").value;
       const notes = document.getElementById("notes").value.trim() || null;
 
-      const duration_s = duration_s_raw ? Number(duration_s_raw) : null;
+      const h = duration_h_raw ? Math.max(0, Number(duration_h_raw)) : 0;
+      const m = duration_min_raw ? Math.max(0, Number(duration_min_raw)) : 0;
+
+      const duration_s = (h || m) ? (Math.floor(h) * 3600 + Math.floor(m) * 60) : null;
       const distance_m = distance_km_raw ? Number(distance_km_raw) * 1000 : null;
 
-      const { error } = await sb.from("activities").insert({
-        source: "manual",
-        start_time: new Date(start_time).toISOString(),
-        sport,
-        name,
-        duration_s,
-        distance_m,
-        notes
-      });
-
-      if (error) {
-        setMessage(error.message, true);
+      if (duration_min_raw && Number(duration_min_raw) > 59) {
+        setMessage("Minuter måste vara 0–59.", true);
         return;
       }
 
-      form.reset();
-      setMessage("Sparat!");
-      window.loadActivities();
+      try {
+        const { error } = await sb.from("activities").insert({
+          source: "manual",
+          start_time: new Date(start_time).toISOString(),
+          sport,
+          name,
+          duration_s,
+          distance_m,
+          notes
+        });
+
+        if (error) throw error;
+
+        form.reset();
+        setMessage("Sparat!");
+        window.loadActivities();
+
+      } catch (e2) {
+        setMessage(e2?.message || "Kunde inte spara", true);
+      }
     });
 
-    // Ladda vid start
+    // första laddning
     window.loadActivities();
   </script>
-
 </body>
 </html>
