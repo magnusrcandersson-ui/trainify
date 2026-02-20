@@ -13,27 +13,28 @@
       max-width: 900px;
       margin: 40px auto;
       padding: 20px;
-      background: #f8f9fb;
+      background: #f4f6f9;
     }
 
     h1 {
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
 
     form {
       background: white;
       padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.05);
       display: grid;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 30px;
     }
 
     input, button {
-      padding: 8px;
+      padding: 10px;
       border-radius: 8px;
       border: 1px solid #ddd;
+      font-size: 14px;
     }
 
     button {
@@ -41,6 +42,7 @@
       background: #111;
       color: white;
       border: none;
+      font-weight: 600;
     }
 
     button:hover {
@@ -49,10 +51,10 @@
 
     .activity {
       background: white;
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
     }
 
     .small {
@@ -62,6 +64,7 @@
 
     #msg {
       font-weight: 600;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -109,11 +112,11 @@
   <div id="activities"></div>
 
   <script>
-    // 🔑 BYT UT DESSA
+    // Dina riktiga Supabase-nycklar
     const SUPABASE_URL = "https://pmstnkmloyipsrveqidg.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Mb-z3MZvMP_KC09dMXE-AQ_AauF362I";
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const form = document.getElementById("activity-form");
     const activitiesDiv = document.getElementById("activities");
@@ -124,10 +127,10 @@
       msg.style.color = isError ? "crimson" : "green";
     }
 
-    async function loadActivities() {
+    window.loadActivities = async function loadActivities() {
       activitiesDiv.innerHTML = "Laddar...";
 
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("activities")
         .select("*")
         .order("start_time", { ascending: false })
@@ -141,7 +144,7 @@
 
       activitiesDiv.innerHTML = "";
 
-      data.forEach(a => {
+      data.forEach((a) => {
         const div = document.createElement("div");
         div.className = "activity";
 
@@ -159,7 +162,7 @@
 
         activitiesDiv.appendChild(div);
       });
-    }
+    };
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -175,7 +178,7 @@
       const duration_s = duration_s_raw ? Number(duration_s_raw) : null;
       const distance_m = distance_km_raw ? Number(distance_km_raw) * 1000 : null;
 
-      const { error } = await supabase.from("activities").insert({
+      const { error } = await sb.from("activities").insert({
         source: "manual",
         start_time: new Date(start_time).toISOString(),
         sport,
@@ -192,11 +195,11 @@
 
       form.reset();
       setMessage("Sparat!");
-      loadActivities();
+      window.loadActivities();
     });
 
-    // Första laddning
-    loadActivities();
+    // Ladda vid start
+    window.loadActivities();
   </script>
 
 </body>
