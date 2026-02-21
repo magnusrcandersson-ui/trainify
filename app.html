@@ -2855,7 +2855,7 @@ function updateStatsForYear(b){
   const th=b["Löpning"].hours.reduce((a,v)=>a+v,0)+b["Styrketräning"].hours.reduce((a,v)=>a+v,0);
   const rk=b["Löpning"].runKm.reduce((a,v)=>a+v,0);
   statTotalSessions.textContent=ts.toString();
-  statTotalHours.innerHTML=`${Math.round(th*10)/10}<span class="stat-unit">h</span>`;
+  statTotalHours.innerHTML=`${Math.round(th*10)/10}<span class="stat-unit">tim</span>`;
   statRunKm.innerHTML=`${Math.round(rk*10)/10}<span class="stat-unit">mil</span>`;
 }
 
