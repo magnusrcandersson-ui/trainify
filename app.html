@@ -1041,11 +1041,11 @@ pre, code { white-space: pre-wrap; word-break: break-word; }
             <div class="field" id="loadField">
               <label class="field-label" for="training_load">Training Load (valfritt)</label>
               <input type="number" id="training_load" min="0" step="1" placeholder="t.ex. 85" inputmode="numeric" />
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: var(--muted);">
-  <p>Enkelt tal per löppass (t.ex. RPE×tid eller TRIMP). Visas i loggen och kan summeras i graf.</p>
-  <p>Tempo (min/km) beräknas automatiskt om distans + tid finns.</p>
-</div>
+              <div class="hint-text">Enkelt tal per löppass (t.ex. RPE×tid eller TRIMP). Visas i loggen och kan summeras i graf.</div>
             </div>
+          </div>
+
+          <div class="hint-text" id="paceHint">Tempo (min/km) beräknas automatiskt om distans + tid finns.</div>
           </div>
 
           <div class="hint-text" id="paceHint">Tempo (min/km) beräknas automatiskt om distans + tid finns.</div>
