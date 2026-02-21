@@ -1035,23 +1035,17 @@ pre, code { white-space: pre-wrap; word-break: break-word; }
               <input type="number" id="distance_km" min="0" step="0.01" placeholder="10.00" />
             </div>
           </div>
-
-          
-         <div class="row2" id="loadFieldRow" style="margin-top:10px;">
+<div class="row2" id="loadFieldRow" style="margin-top:10px;">
             <div class="field" id="loadField">
               <label class="field-label" for="training_load">Training Load (valfritt)</label>
               <input type="number" id="training_load" min="0" step="1" placeholder="t.ex. 85" inputmode="numeric" />
-              <div class="hint-text">Enkelt tal per löppass (t.ex. RPE×tid eller TRIMP). Visas i loggen och kan summeras i graf.</div>
             </div>
           </div>
-
-          <div class="hint-text" id="paceHint">Tempo (min/km) beräknas automatiskt om distans + tid finns.</div>>
 
           <div class="field">
             <label class="field-label" for="notes">Anteckningar (valfritt)</label>
             <input type="text" id="notes" placeholder="Känsla, upplägg, vikter…" />
           </div>
-
           <button class="btn-primary" type="submit">Spara pass</button>
           <div id="msg" class="msg" aria-live="polite"></div>
         </form>
