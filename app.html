@@ -1,0 +1,3394 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trainify</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ── Defensive tab wiring (override) ── */
+(function(){
+  const td=document.getElementById("tabDash");
+  const tl=document.getElementById("tabLogg");
+  const tg=document.getElementById("tabGolf");
+  const vd=document.getElementById("viewDash");
+  const vl=document.getElementById("viewLogg");
+  const vg=document.getElementById("viewGolf");
+  if(!td || !tl || !vd || !vl) return;
+
+  function activate(which){
+    const isDash = which==="dash";
+    const isLogg = which==="logg";
+    const isGolf = which==="golf";
+    td.classList.toggle("active", isDash);
+    tl.classList.toggle("active", isLogg);
+    if(tg) tg.classList.toggle("active", isGolf);
+    vd.classList.toggle("active", isDash);
+    vl.classList.toggle("active", isLogg);
+    if(vg) vg.classList.toggle("active", isGolf);
+    // hide activity form row (if present) outside dashboard
+    const formRow=document.getElementById("formRow");
+    if(formRow) formRow.classList.toggle("hidden", !isDash);
+    // lazy refresh golf
+    if(isGolf && typeof refreshGolf === "function") refreshGolf();
+  }
+
+  td.onclick = ()=>activate("dash");
+  tl.onclick = ()=>activate("logg");
+  if(tg) tg.onclick = ()=>activate("golf");
+})();
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+/* ── Defensive tab wiring (override) ── */
+(function(){
+  const td=document.getElementById("tabDash");
+  const tl=document.getElementById("tabLogg");
+  const tg=document.getElementById("tabGolf");
+  const vd=document.getElementById("viewDash");
+  const vl=document.getElementById("viewLogg");
+  const vg=document.getElementById("viewGolf");
+  if(!td || !tl || !vd || !vl) return;
+
+  function activate(which){
+    const isDash = which==="dash";
+    const isLogg = which==="logg";
+    const isGolf = which==="golf";
+    td.classList.toggle("active", isDash);
+    tl.classList.toggle("active", isLogg);
+    if(tg) tg.classList.toggle("active", isGolf);
+    vd.classList.toggle("active", isDash);
+    vl.classList.toggle("active", isLogg);
+    if(vg) vg.classList.toggle("active", isGolf);
+    // hide activity form row (if present) outside dashboard
+    const formRow=document.getElementById("formRow");
+    if(formRow) formRow.classList.toggle("hidden", !isDash);
+    // lazy refresh golf
+    if(isGolf && typeof refreshGolf === "function") refreshGolf();
+  }
+
+  td.onclick = ()=>activate("dash");
+  tl.onclick = ()=>activate("logg");
+  if(tg) tg.onclick = ()=>activate("golf");
+})();
+</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #06080f;
+      --bg1:      #1f2340;
+      --bg2:      #252847;
+      --bg3:      #2c3054;
+      --bg4:      #333860;
+      --border:   rgba(150,160,255,0.22);
+      --border2:  rgba(150,160,255,0.38);
+      --text:     #e8eaf8;
+      --muted:    #a0a8d8;
+      --muted2:   #7a85b8;
+      --accent: #ff7a00;
+      --accent2: #ff9a3d;
+      --violet:   #a78bfa;
+      --violet2:  #c4b5fd;
+      --blue:     #3b82f6;
+      --blue2:    #60a5fa;
+      --cyan:     #22d3ee;
+      --good:     #34d399;
+      --bad:      #f87171;
+      --glow:     rgba(99,102,241,0.25);
+      --glow2:    rgba(167,139,250,0.2);
+      --mono: 'SF Mono', ui-monospace, Menlo, Monaco, monospace;
+      --sans: 'Inter', system-ui, sans-serif;
+      --display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 900px 700px at 15% -5%,  rgba(99,102,241,0.22) 0%, transparent 55%),
+        radial-gradient(ellipse 700px 600px at 85%  5%,  rgba(167,139,250,0.16) 0%, transparent 50%),
+        radial-gradient(ellipse 600px 500px at 50% 100%, rgba(59,130,246,0.13) 0%, transparent 55%);
+      min-height: 100vh;
+    }
+
+    /* ══ TOPBAR ══ */
+    .topbar {
+      position: sticky; top: 0; z-index: 200;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      height: 88px; padding: 0 36px;
+      background: rgba(24,27,46,0.93);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(28px) saturate(1.8);
+      -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 14px;
+      justify-self: start;
+    }
+    .logo-mark {
+      position: relative;
+      width: 64px; height: 64px; border-radius: 18px; flex-shrink: 0;
+      background: linear-gradient(145deg, #8b80f9 0%, #5b5ce8 40%, #a78bfa 100%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow:
+        0 0 0 1px rgba(167,139,250,0.35),
+        0 4px 22px rgba(99,102,241,0.6),
+        0 12px 44px rgba(99,102,241,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: transform 220ms ease, box-shadow 220ms ease;
+      cursor: default;
+    }
+    .logo-mark:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow:
+        0 0 0 1px rgba(167,139,250,0.5),
+        0 8px 32px rgba(99,102,241,0.75),
+        0 18px 56px rgba(99,102,241,0.38),
+        inset 0 1px 0 rgba(255,255,255,0.24);
+    }
+    .logo-mark::before {
+      content: ''; position: absolute; inset: 0; border-radius: 16px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .logo-mark svg { width: 33px; height: 33px; position: relative; z-index: 1; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.55)); }
+    .brand-text { display: flex; flex-direction: column; gap: 2px; }
+    .brand-name {
+      font-family: var(--display); font-size: 28px; font-weight: 700;
+      letter-spacing: -0.03em; line-height: 1.05;
+      background: linear-gradient(130deg, #f0f2ff 15%, #c4b5fd 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .brand-sub {
+      font-size: 10.5px; color: var(--muted2); font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .nav-center { justify-self: center; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; justify-self: end; }
+
+    .nav-tabs {
+      display: flex; align-items: center; gap: 2px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: 12px; padding: 4px;
+    }
+    .nav-tab {
+      appearance: none; border: none; background: transparent;
+      color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 600;
+      padding: 7px 20px; border-radius: 9px; cursor: pointer; transition: all 150ms ease;
+    }
+    .nav-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.05); }
+    .nav-tab.active { background: linear-gradient(135deg, var(--accent), var(--violet)); color: #fff; box-shadow: 0 4px 18px var(--glow); }
+
+    .status-pills { display: flex; align-items: center; gap: 8px; }
+    .status-pill {
+      display: flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 999px;
+      font-size: 12px; font-weight: 500; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+    }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--good);
+      box-shadow: 0 0 0 3px rgba(52,211,153,0.2), 0 0 8px rgba(52,211,153,0.4);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 3px rgba(52,211,153,0.2), 0 0 8px rgba(52,211,153,0.3); }
+      50%      { box-shadow: 0 0 0 5px rgba(52,211,153,0.1), 0 0 16px rgba(52,211,153,0.5); }
+    }
+
+    /* ══ LAYOUT ══ */
+    .page-wrap {
+      max-width: 1400px; margin: 0 auto;
+      padding: 28px 24px 80px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      grid-template-rows: auto;
+      gap: 20px;
+      align-items: start;
+    }
+    .top-form-row { grid-column: 1; grid-row: 1; }
+    .top-form-row.hidden { display: none; }
+    .top-form-row > .panel { width: 100%; }
+    .main-content { grid-column: 2; grid-row: 1; }
+    /* When form hidden (logg tab), content spans full width */
+    .top-form-row.hidden ~ .main-content { grid-column: 1 / -1; }
+    @media (max-width: 900px) {
+      .page-wrap { grid-template-columns: 1fr; }
+      .top-form-row, .main-content { grid-column: 1; }
+      .top-form-row.hidden ~ .main-content { grid-column: 1; }
+    }
+
+    /* ══ PANEL ══ */
+    .panel {
+      background: var(--bg1); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; position: relative;
+    }
+    .panel::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.5), rgba(167,139,250,0.4), transparent);
+      pointer-events: none;
+    }
+    .panel-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); }
+    .panel-title   { font-family: var(--display); font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+    .panel-subtitle{ font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+    .panel-body    { padding: 24px; }
+    .top-form-row .panel-body { padding: 18px 20px; }
+    .top-form-row .panel-header { padding: 16px 20px 13px; }
+    .top-form-row .panel-title { font-size: 13px; }
+    .top-form-row .panel-subtitle { font-size: 12px; margin-top: 3px; }
+    .top-form-row .form { gap: 12px; }
+    .top-form-row input,
+    .top-form-row select { padding: 9px 12px; font-size: 13px; }
+    .top-form-row .btn-primary { padding: 11px 16px; font-size: 13px; }
+    .top-form-row .field-label { font-size: 10.5px; }
+    .top-form-row .row3 { gap: 8px; }
+    .top-form-row .panel-footer { padding: 10px 20px; font-size: 11px; }
+    .panel-footer  { padding: 13px 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted2); text-align: center; background: rgba(255,255,255,0.01); }
+
+    /* ══ FORM ══ */
+    .form { display: grid; gap: 16px; }
+    .field { display: grid; gap: 7px; }
+    .field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+
+    input, select {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      border: 1px solid rgba(120,130,220,0.15); background: rgba(28,32,58,0.78);
+      color: var(--text); outline: none; font-family: var(--sans); font-size: 14px; font-weight: 500;
+      transition: border-color 150ms, box-shadow 150ms; -webkit-appearance: none; appearance: none;
+    }
+    input::placeholder { color: rgba(255,255,255,0.2); }
+    input:focus, select:focus {
+      border-color: rgba(99,102,241,0.6);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15), 0 0 16px rgba(99,102,241,0.08);
+    }
+    select option { background: var(--bg2); }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 520px) { .row2, .row3 { grid-template-columns: 1fr; } }
+    .hint-text { font-size: 12px; color: var(--muted2); margin-top: 3px; }
+
+    .btn-primary {
+      cursor: pointer; width: 100%; padding: 13px 20px; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--violet) 100%);
+      color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 700;
+      box-shadow: 0 8px 28px var(--glow); transition: transform 130ms ease, box-shadow 130ms ease, opacity 130ms;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 36px var(--glow2); }
+    .btn-primary:active { transform: translateY(0); opacity: 0.9; }
+
+    .btn-ghost {
+      cursor: pointer; padding: 9px 16px; border-radius: 10px; border: 1px solid var(--border2);
+      background: rgba(255,255,255,0.04); color: var(--text); font-family: var(--sans);
+      font-size: 12px; font-weight: 600; width: auto; white-space: nowrap;
+      transition: background 130ms, border-color 130ms, transform 130ms;
+    }
+    .btn-ghost:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.35); transform: translateY(-1px); }
+    .btn-ghost:active { transform: translateY(0); }
+
+    .msg { min-height: 18px; font-size: 13px; font-weight: 600; text-align: center; margin-top: 4px; }
+
+    /* ══ CALENDAR PICKER ══ */
+    .date-picker-wrap { position: relative; }
+    .date-display {
+      width: 100%; padding: 11px 14px; border-radius: 10px;
+      border: 1px solid rgba(120,130,220,0.15); background: rgba(28,32,58,0.78);
+      color: var(--text); font-family: var(--sans); font-size: 14px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      transition: border-color 150ms, box-shadow 150ms; user-select: none;
+    }
+    .date-display:hover, .date-display.open {
+      border-color: rgba(99,102,241,0.6); box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    .date-display .placeholder { color: rgba(255,255,255,0.22); }
+    .date-display .cal-icon { opacity: 0.55; font-size: 15px; flex-shrink: 0; }
+
+    .calendar-popup {
+      display: none; position: absolute; top: calc(100% + 8px); left: 0; z-index: 500;
+      width: 320px; background: #272b4a; border: 1px solid var(--border2); border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.1); overflow: hidden;
+      animation: dropIn 160ms ease both;
+    }
+    .calendar-popup.open { display: block; }
+    @keyframes dropIn { from { opacity:0; transform:translateY(-8px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+
+    .cal-top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border); gap: 8px;
+    }
+    .cal-nav-btn {
+      appearance: none; border: none; background: transparent; color: var(--muted);
+      cursor: pointer; width: 28px; height: 28px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+      transition: background 130ms, color 130ms; flex-shrink: 0;
+    }
+    .cal-nav-btn:hover { background: rgba(99,102,241,0.15); color: var(--accent2); }
+    .cal-month-label { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); flex: 1; text-align: center; letter-spacing: -0.01em; }
+
+    .cal-grid { padding: 10px 14px; }
+    .cal-weekdays { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 6px; }
+    .cal-wd { text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted2); padding: 4px 0; }
+    .cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+    .cal-day {
+      aspect-ratio: 1; border-radius: 8px; border: none; background: transparent;
+      color: var(--muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 120ms, color 120ms;
+    }
+    .cal-day:hover:not(.empty):not(.selected) { background: rgba(99,102,241,0.15); color: var(--accent2); }
+    .cal-day.other-month { color: var(--muted2); opacity: 0.35; }
+    .cal-day.today { color: var(--accent2); font-weight: 700; position: relative; }
+    .cal-day.today::after {
+      content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+      width: 4px; height: 4px; border-radius: 50%; background: var(--accent2);
+    }
+    .cal-day.selected {
+      background: linear-gradient(135deg, var(--accent), var(--violet));
+      color: #fff !important; font-weight: 700;
+      box-shadow: 0 4px 14px var(--glow);
+    }
+    .cal-day.empty { pointer-events: none; }
+
+    .cal-time {
+      padding: 12px 16px 14px; border-top: 1px solid var(--border);
+      display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end;
+    }
+    .cal-time-label { font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted2); margin-bottom: 6px; }
+    .cal-time-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cal-time input { padding: 8px 10px; font-size: 13px; text-align: center; }
+    .cal-confirm {
+      appearance: none; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--violet));
+      color: #fff; font-family: var(--sans); font-size: 12px; font-weight: 700;
+      padding: 10px 14px; border-radius: 8px; white-space: nowrap;
+      box-shadow: 0 4px 14px var(--glow); transition: opacity 130ms; align-self: end;
+    }
+    .cal-confirm:hover { opacity: 0.88; }
+
+    /* ══ TOOLBAR ══ */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 16px 24px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.012);
+    }
+    .toolbar-left  { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .toolbar-right { display: flex; gap: 8px; align-items: center; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+    .chip-accent { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); color: var(--accent2); }
+
+    /* ══ STATS ══ */
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 18px; }
+    @media (max-width: 680px) { .stats-row { grid-template-columns: 1fr; } }
+    .stat-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+      padding: 18px 20px; position: relative; overflow: hidden;
+    }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--violet)); }
+    .stat-card::after  { content: ''; position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%); pointer-events: none; }
+    .stat-card.blue::before   { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+    .stat-card.blue::after    { background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%); }
+    .stat-card.violet::before { background: linear-gradient(90deg, var(--violet), var(--violet2)); }
+    .stat-card.violet::after  { background: radial-gradient(circle, rgba(167,139,250,0.15) 0%, transparent 70%); }
+    .stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); position: relative; z-index: 1; }
+    .stat-value { margin-top: 10px; font-family: var(--display); font-size: 38px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--text); position: relative; z-index: 1; }
+    .stat-unit  { font-size: 18px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+    .stat-sub   { margin-top: 6px; font-size: 12px; color: var(--muted2); font-weight: 500; position: relative; z-index: 1; }
+
+    /* ══ CHARTS ══ */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 680px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+    .chart-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .chart-card-title { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .sport-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+    .sport-badge.run      { background: rgba(99,102,241,0.15); color: var(--accent2); border: 1px solid rgba(99,102,241,0.25); }
+    .sport-badge.strength { background: rgba(167,139,250,0.15); color: var(--violet2); border: 1px solid rgba(167,139,250,0.25); }
+    .chart-card-meta { font-size: 11.5px; color: var(--muted2); font-weight: 500; }
+    .chart-wrap { position: relative; height: 230px; }
+    canvas { width: 100% !important; height: 100% !important; display: block; }
+
+    /* ══ SECTION HDR ══ */
+    .section-hdr { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px 12px; }
+    .section-hdr-title { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); }
+    .section-hdr-sub   { font-size: 12px; color: var(--muted2); font-weight: 500; }
+
+    /* ══ ACTIVITY LIST ══ */
+    .activities-list { display: grid; gap: 8px; padding: 0 20px 20px; }
+    .activity-item {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 14px;
+      padding: 14px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      transition: border-color 140ms, background 140ms, transform 120ms;
+    }
+    .activity-item:hover { background: var(--bg3); border-color: rgba(99,102,241,0.25); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .activity-icon { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .activity-icon.run      { background: rgba(99,102,241,0.15); }
+    .activity-icon.strength { background: rgba(167,139,250,0.14); }
+    .activity-body  { min-width: 0; }
+    .activity-name  { font-size: 14px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-when  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .activity-tags  { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 6px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); color: var(--muted); font-size: 11.5px; font-weight: 600; }
+    .activity-notes { margin-top: 8px; padding: 8px 12px; background: rgba(28,32,58,0.65); border-left: 2px solid rgba(99,102,241,0.5); border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .activity-id { font-family: var(--mono); font-size: 10px; color: var(--muted2); white-space: nowrap; padding-top: 3px; }
+
+    .empty-state { padding: 48px 20px; text-align: center; color: var(--muted); border: 1px dashed rgba(99,102,241,0.2); border-radius: 14px; margin: 12px 20px; }
+    .empty-state-icon  { font-size: 34px; margin-bottom: 12px; }
+    .empty-state-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .empty-state-sub   { font-size: 13px; }
+
+    .view { display: none; }
+    .view.active { display: block; }
+    .year-select-wrap select { width: auto; min-width: 110px; padding: 8px 12px; font-size: 13px; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.4); }
+
+    @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    .panel { animation: fadeUp 320ms ease both; }
+    .panel:nth-child(2) { animation-delay: 60ms; }
+    .stat-card { animation: fadeUp 320ms ease both; }
+    .stat-card:nth-child(2) { animation-delay: 55ms; }
+    .stat-card:nth-child(3) { animation-delay: 110ms; }
+
+    /* ══ PR & RACES ══ */
+
+    .mini-item.best { border-color: rgba(52,211,153,0.35); box-shadow: 0 10px 30px rgba(52,211,153,0.10); }
+    .mini-item.best .mini-time { background: linear-gradient(135deg, rgba(52,211,153,0.95), rgba(34,211,238,0.95));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .badge-best { display:inline-flex; align-items:center; gap:6px; padding: 4px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+      background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.22); color: rgba(167,255,220,0.95); }
+    .lock-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .lock-pill { cursor:pointer; user-select:none; }
+    .locked .mini-actions button { opacity: 0.35; pointer-events:none; }
+    .locked .mini-form button { opacity: 0.55; }
+    .pr-trend { margin-top: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(150,160,255,0.14);
+      border-radius: 14px; padding: 12px 12px; }
+    .pr-trend-top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom: 10px; }
+    .pr-trend-title { font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .pr-trend select { width:auto; min-width: 140px; padding: 8px 10px; font-size: 13px; }
+    .pr-trend-canvas { position: relative; height: 160px; }
+
+    .records-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 920px) { .records-grid { grid-template-columns: 1fr; } }
+    .records-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .records-card-hdr { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding: 16px 18px; border-bottom:1px solid rgba(150,160,255,0.14); }
+    .records-card-title { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); }
+    .records-card-sub { font-size: 12px; color: var(--muted2); margin-top: 4px; }
+    .records-body { padding: 16px 18px; display: grid; gap: 12px; }
+    .mini-form { display:grid; gap:10px; }
+    .mini-form .row2, .mini-form .row3 { gap: 10px; }
+    .mini-form input, .mini-form select { padding: 9px 12px; font-size: 13px; }
+    .mini-form .btn-primary { padding: 11px 14px; font-size: 13px; box-shadow:none; }
+    .list-mini { display:grid; gap:8px; margin-top: 6px; }
+    .mini-item { display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:start;
+      padding: 12px 12px; background: rgba(28,32,58,0.55); border: 1px solid rgba(150,160,255,0.14); border-radius: 14px; }
+    .mini-main { min-width:0; }
+    .mini-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+    .mini-name { font-size: 13.5px; font-weight: 800; color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mini-time { font-family: var(--display); font-size: 15px; font-weight: 800; letter-spacing:-0.01em; color: #fff; }
+    .mini-meta { margin-top: 4px; font-size: 12px; color: var(--muted); display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+      background: rgba(99,102,241,0.10); border: 1px solid rgba(99,102,241,0.22); color: var(--accent2); }
+    .pill.soft { background: rgba(255,255,255,0.04); border-color: rgba(150,160,255,0.18); color: var(--muted); font-weight:600; }
+    .mini-actions { display:flex; gap:6px; }
+    .mini-actions .btn-ghost { padding: 7px 10px; font-size: 12px; border-radius: 10px; }
+    .mini-actions .danger { border-color: rgba(248,113,113,0.55); color: var(--bad); }
+    .note-mini { margin-top: 8px; font-size: 12px; color: var(--muted2); line-height: 1.45; }
+
+  
+    /* Golf (inline tab) */
+    .golf-grid { display:grid; grid-template-columns: 420px 1fr; gap: 14px; }
+    @media (max-width: 980px){ .golf-grid{ grid-template-columns: 1fr; } }
+    .stat-row { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    @media (max-width: 640px){ .stat-row{ grid-template-columns: 1fr; } }
+
+
+/* ───────── Mobile App Optimization ───────── */
+
+@media (max-width: 768px){
+
+  body {
+    padding-bottom: 90px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(12px);
+  }
+
+  .panel {
+    border-radius: 18px;
+  }
+
+  .kpi-card {
+    padding: 18px;
+  }
+
+  .btn-primary,
+  .btn-ghost {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  input, select {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  /* Bottom Navigation */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    display: flex;
+    background: rgba(10,12,22,0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 2000;
+  }
+
+  .mobile-nav button {
+    flex: 1;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .mobile-nav button.active {
+    color: #6C7CFF;
+  }
+
+  .nav-tabs {
+    display: none;
+  }
+
+}
+
+
+/* Fix bottom nav visibility & iOS click issues */
+
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px){
+  .mobile-nav {
+    display: flex;
+  }
+}
+
+/* Prevent nav overlay blocking clicks */
+@media (max-width: 768px){
+  .view {
+    padding-bottom: 90px;
+  }
+}
+
+
+/* ───────── iOS-like bottom nav + no horizontal scroll ───────── */
+
+/* No sideways scroll (global) */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Avoid wide elements forcing overflow */
+img, canvas, svg, video { max-width: 100%; }
+table { width: 100%; }
+pre, code { white-space: pre-wrap; word-break: break-word; }
+
+/* Ensure main containers never exceed viewport */
+.container, .main-content, .view, .panel, .kpi-grid, .list, .list-mini {
+  max-width: 100%;
+}
+
+/* iOS-like bottom nav styling */
+@media (max-width: 768px){
+  body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .mobile-nav{
+    height: calc(74px + env(safe-area-inset-bottom));
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) 10px;
+    background: rgba(12, 14, 26, 0.86);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px 18px 0 0;
+    margin: 0 10px 0 10px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-shadow: 0 -12px 28px rgba(0,0,0,0.35);
+  }
+  .mobile-nav button{
+    border-radius: 14px;
+    padding: 10px 6px;
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .mobile-nav button:active{
+    transform: scale(0.98);
+  }
+  .mobile-nav button.active{
+    background: rgba(108,124,255,0.14);
+    color: #9aa6ff;
+  }
+  .mobile-nav button span{
+    font-size: 12px;
+    letter-spacing: 0.2px;
+  }
+}
+
+/* Prevent accidental sideways drag from charts */
+@media (max-width: 768px){
+  .panel-body { overflow-x: hidden; }
+}
+
+
+/* ───────── Mobile click reliability (iOS) ───────── */
+@media (max-width: 768px){
+  .mobile-nav, .mobile-nav * { pointer-events: auto; }
+  .mobile-nav button{
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+}
+
+
+/* ── Date-only calendar: hide time controls ── */
+.cal-time,
+.cal-time-label,
+.cal-time-inputs,
+.cal-time-row,
+#calHour,
+#calMinute,
+#calHourWrap,
+#calMinuteWrap {
+  display: none !important;
+}
+
+
+/* ── Date-only calendar (activities): hide time + improve tap ── */
+.cal-time { display:none !important; }
+.calendar-popup{ z-index: 5000; pointer-events: auto; }
+.cal-day{ pointer-events:auto; }
+
+
+/* ── Charts layout: 2 cols + full-width card ── */
+.charts-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.chart-card.span-2{ grid-column: 1 / -1; }
+
+@media (max-width: 900px){
+  .charts-grid{ grid-template-columns: 1fr; }
+  .chart-card.span-2{ grid-column: auto; }
+}
+
+
+/* ── Brand logo image ── */
+.brand-logo{
+  height: 44px;
+  width: auto;
+  display:block;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,0.35));
+}
+@media (max-width: 768px){
+  .brand-logo{ height: 34px; }
+}
+
+</style>
+
+  <style>
+    html.auth-pending body { visibility: hidden; }
+  
+    /* Golf (inline tab) */
+    .golf-grid { display:grid; grid-template-columns: 420px 1fr; gap: 14px; }
+    @media (max-width: 980px){ .golf-grid{ grid-template-columns: 1fr; } }
+    .stat-row { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    @media (max-width: 640px){ .stat-row{ grid-template-columns: 1fr; } }
+
+
+/* ───────── Mobile App Optimization ───────── */
+
+@media (max-width: 768px){
+
+  body {
+    padding-bottom: 90px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    backdrop-filter: blur(12px);
+  }
+
+  .panel {
+    border-radius: 18px;
+  }
+
+  .kpi-card {
+    padding: 18px;
+  }
+
+  .btn-primary,
+  .btn-ghost {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  input, select {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  /* Bottom Navigation */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    display: flex;
+    background: rgba(10,12,22,0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 2000;
+  }
+
+  .mobile-nav button {
+    flex: 1;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .mobile-nav button.active {
+    color: #6C7CFF;
+  }
+
+  .nav-tabs {
+    display: none;
+  }
+
+}
+
+
+/* Fix bottom nav visibility & iOS click issues */
+
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px){
+  .mobile-nav {
+    display: flex;
+  }
+}
+
+/* Prevent nav overlay blocking clicks */
+@media (max-width: 768px){
+  .view {
+    padding-bottom: 90px;
+  }
+}
+
+
+/* ───────── iOS-like bottom nav + no horizontal scroll ───────── */
+
+/* No sideways scroll (global) */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Avoid wide elements forcing overflow */
+img, canvas, svg, video { max-width: 100%; }
+table { width: 100%; }
+pre, code { white-space: pre-wrap; word-break: break-word; }
+
+/* Ensure main containers never exceed viewport */
+.container, .main-content, .view, .panel, .kpi-grid, .list, .list-mini {
+  max-width: 100%;
+}
+
+/* iOS-like bottom nav styling */
+@media (max-width: 768px){
+  body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .mobile-nav{
+    height: calc(74px + env(safe-area-inset-bottom));
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) 10px;
+    background: rgba(12, 14, 26, 0.86);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px 18px 0 0;
+    margin: 0 10px 0 10px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    box-shadow: 0 -12px 28px rgba(0,0,0,0.35);
+  }
+  .mobile-nav button{
+    border-radius: 14px;
+    padding: 10px 6px;
+    transition: transform 120ms ease, background 120ms ease;
+  }
+  .mobile-nav button:active{
+    transform: scale(0.98);
+  }
+  .mobile-nav button.active{
+    background: rgba(108,124,255,0.14);
+    color: #9aa6ff;
+  }
+  .mobile-nav button span{
+    font-size: 12px;
+    letter-spacing: 0.2px;
+  }
+}
+
+/* Prevent accidental sideways drag from charts */
+@media (max-width: 768px){
+  .panel-body { overflow-x: hidden; }
+}
+
+
+/* ───────── Mobile click reliability (iOS) ───────── */
+@media (max-width: 768px){
+  .mobile-nav, .mobile-nav * { pointer-events: auto; }
+  .mobile-nav button{
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+}
+
+
+/* ── Date-only calendar: hide time controls ── */
+.cal-time,
+.cal-time-label,
+.cal-time-inputs,
+.cal-time-row,
+#calHour,
+#calMinute,
+#calHourWrap,
+#calMinuteWrap {
+  display: none !important;
+}
+
+
+/* ── Date-only calendar (activities): hide time + improve tap ── */
+.cal-time { display:none !important; }
+.calendar-popup{ z-index: 5000; pointer-events: auto; }
+.cal-day{ pointer-events:auto; }
+
+
+/* ── Charts layout: 2 cols + full-width card ── */
+.charts-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.chart-card.span-2{ grid-column: 1 / -1; }
+
+@media (max-width: 900px){
+  .charts-grid{ grid-template-columns: 1fr; }
+  .chart-card.span-2{ grid-column: auto; }
+}
+
+
+/* ── Brand logo image ── */
+.brand-logo{
+  height: 44px;
+  width: auto;
+  display:block;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,0.35));
+}
+@media (max-width: 768px){
+  .brand-logo{ height: 34px; }
+}
+
+
+/* ══ Analyze modal ══ */
+.modal-backdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  background: rgba(0,0,0,0.58);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 6000;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+.modal-backdrop.open{ display:flex; }
+.modal-card{
+  width: min(980px, 100%);
+  max-height: min(86vh, 900px);
+  overflow:auto;
+  border-radius: 18px;
+  border: 1px solid rgba(150,160,255,0.22);
+  background: rgba(31,35,64,0.98);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.65);
+}
+.modal-top{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(150,160,255,0.14);
+}
+.modal-title{
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.modal-body{
+  padding: 14px 16px 16px;
+}
+</style>
+
+
+  <!-- Leaflet for map rendering -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+</head>
+<body>
+
+<header class="topbar">
+  <!-- Left: Brand -->
+  <div class="brand">
+    <img class="brand-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB9AAAAFACAYAAADkjucAAAA0PElEQVR4nO3dd7hkR3kn/m8pGEkkkUxGJppgogwGFpDIGUYiGhlJgFiHA2tsgsGYYJKx8dq7hmNsghfj35pgkEcEIZIAgUEmyuScwSIIBFgSQqF+f3RrNQyamdt9T/Xp7vv5PE8/o2fm1rfe26MZlfo9VZUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACspzJ2AcuudqmbzSi99xkAAAAAAABg2e01dgEAAAAAAAAAsAw00AEAAAAAAAAgGugAAAAAAAAAkEQDHQAAAAAAAACSaKADAAAAAAAAQBINdAAAAAAAAABIooEOAAAAAAAAAEk00AEAAAAAAAAgiQY6AAAAAAAAACTRQAcAAAAAAACAJBroAAAAAAAAAJBEAx0AAAAAAAAAkmigAwAAAAAAAEASDXQAAAAAAAAASKKBDgAAAAAAAABJNNABAAAAAAAAIIkGOgAAAAAAAAAk0UAHAAAAAAAAgCQa6AAAAAAAAACQRAMdAAAAAAAAAJJooAMAAAAAAABAEg10AAAAAAAAAEiigQ4AAAAAAAAASTTQAQAAAAAAACCJBjoAAAAAAAAAJNFABwAAAAAAAIAkGugAAAAAAAAAkEQDHQAAAAAAAACSaKADAAAAAAAAQBINdAAAAAAAAABIooEOAAAAAAAAAEk00AEAAAAAAAAgiQY6AAAAAAAAACTRQAcAAAAAAACAJBroAAAAAAAAAJBEAx0AAAAAAAAAkmigAwAAAAAAAEASDXQAAAAAAAAASKKBDgAAAAAAAABJNNABAAAAAAAAIIkGOgAAAAAAAAAk0UAHAAAAAAAAgCTJPmMXAAAAADCr2uWaSW6U5BrT19WnP14myQFJ9p/+eECSmuSsJGfu8OMPk3x9p9enSp+vLvL7AAAAYLlooAMAAABLrXbZL8kdk9w6yS2nr8vPGLNvkkttYK7vJ/nQ9HVykneVPj+dcS4AAABWVBm7gGVXu9TNZpR+fd/nWuvvJHnx2HWsuNuUUk7e6BfXWs9NsnfDemZxTpKfTX88O8mPMtnF8YMk30/yjSRfnb4+X0r52ihVLpla669n8mHcIpyb5GqllO8saL5Na/jveF9KeUyD3EX9ufyTUspzG8+xS7XWnya52MCxjy2lvGjgTP8OrYZvlVKutrsvqLXum+TDSW7SsI6PJrlVKeW8hnPMpdZ6mSSfSXLFhtO8vZRyt4b5K612eWCSf5lx2OtKnwfNMMcy/tmvmazrLnidmeR7Sb6T5NQk38rk383PJPlc6XP2SHXu0ZK9v7Otm/tYNyepXS6X5N5JtiW5eyY7ycdwRpK3JTkuyZtKn9NGqgMAAIAFsAMd2Ix9p68L7PZD/lrrD5OckuQjSU5MclIp5Yxm1S2voxY41z5JjkjyVwuckzaeVGv9u1KKD2zZEkop59RaH5Hk39NuzXqLJI9P8heN8jfjr9K2ef6TJMc0zF8H2+YYc9zQRYygJNlv+rrAr+zia8+rXT6e5KTp612lzw/blreyZls3d/nFdXOfLbNurl1un+SxSQ7LcnxucfFMajksybm1y/Ykf1P6vHfUqgAAAGhir7ELALaUy2Ry7OITkhyf5Ae11nfUWh9Va730uKUtRq31l5L85oKnXWTDnnYuleQpYxcBi1RK+WiSP288zTNrrddpPMdMaq13TnJ042meVEr5euM5Vlbtsk+Se8047Nwkb25QzjLbO8nNk/x+ktcn+U7tcnztclTt9nxMNrv1i+vmLu+oXR5Vu6zlurl22ad2eUTt8rFMHsh4UJajeb6zfZI8MMlJtcsptcsjp39nAAAAsCY00IEx/VKSOyd5WZJTa63/WGu94cg1tXafJJdb8Jw3qbXefMFz0kZXa7362EXAgj0ryaca5u+f5CUN82dSaz0g7es5McnfN55j1R2SSQNzFu+x+zr7Jrlnklck+Vbt8r9ql2uOW9La+Pl1c5d/rF3WZt1cu9wnySeS/EOSm41bzUxumuTlST5Zu9x37GIAAAAYhgY6sCz2S3Jkkk/WWl9Xaz1o7IIaGWs3uF3o62G/JM8cuwhYpFLKzzLZjd3ynvI71lqX5TjzZye5VsP8M5IcU0qpDedYB9vmGLN94BpW3SUy2Zn+hdrlH2qXK41d0Bq5cN3c5XW1y8qum2uXG9cu70jyxiTXH7ueTfjVJG+YnhJw47GLAQAAYHM00IFlU5I8IMmna61PqLWWsQsaSq31CpnsyhrDw2qt++75y1gBR9VabzB2EbBIpZQPJ/nLxtO8oNZ65cZz7Fat9dczaTi29EellK80nmMd3G+OMetw/3kLeyd5RJLP1y5PrF32HrugNXLhurnLE2qXlVk31y6ldnl8kg9nsrN+Xdw5yYdrl8ev0u8HAAAAP08DHVhWByR5QZLjaq2XHLuYgRyRydGmY7hCZr/LleW0d5Lnjl0EjOAZST7TMP/AJC9qmL9btdZ9MjmauWVz8T1J/rZh/lqoXQ5Oco0Zh32k9PlGi3rWyCWT/EWSd9YuVx27mDVz4bq5y9Kvm6enEZyQyYNRvzRyOS38Uibf2wlOXgAAAFhNGujAsrtvkvfXWi8/diEDGPsY9bHnZziH1Vp/Y+wiYJFKKWcneWSS8xtOc3it9bCG+bvzpEzu0m3lzCSPcnT7htx/jjF2n2/cIUlOqV0OGbuQNTRZN3dZ2nVz7XLrJB9Pcrexa1mAuyX5+PR7BgAAYIVooAOr4NeSnFBrvdTYhcyr1nqTJDcbuYx711ovN3INDOf5YxcAi1ZKOTnJXzWepq+1XrrxHD+n1nq9JE9rPM0fl1K+1HiOdbFtjjHbB65h3V0+k9259x27kDU0WTd3Wbp1c+1yryTvzORkpK3iCpmcuuAkKAAAgBWigQ6sioOT/OPYRWzC0WMXkMlxkg8buwgGc2it9R5jFwEjeFqSzzXMv3ImRyEvRK21JHlpkv0aTvO+JC9smL82apdrJrnxjMO+XPp8okU9a26/JMfWbq4HFti9pVs31y5HZXJSwwFj1zKCAzI5Xt9pUAAAACtCAx1YJdtqrceMXcSspvfaLkvj2gd36+V50+YbbBmllJ+m/VHux9RaD22Yv6PfTnKHhvlnJXlkKaXl+7VOts0xZvvANWwl+yT5v7XLLcYuZA1tq12WYt1cuzwiySsy+f3eqvZJ8oraLcVDtQAAAOyBBjqwal5Qa73M2EXM6B5Jrjh2EVMH11pvNHYRDObmSR46dhGwaKWU9yf53y2nSPKSWmvLXeGptV417a9j+JNSyhcaz7FOts0xZvvANWw1ByR5Y+221LHei/KC2mXUdXPtco8kLxmzhiXz0tptifvfAQAAVpoGOrBqDkzypLGLmNHRYxewk6PHLoBBPbvWuu/YRcAInprkiw3zr5vkmQ3zk6RP0vK+9Q8k+V8N89dK7XL5JP9txmHfT/JvDcrZaq6S5EVjF7GGDsyI6+ba5eAk/5KtvfN8Z/skeV3tcvOxCwEAAGDXNNCBVfSYWuvFxy5iI6a75e8zdh07OaLWuvfYRTCYayd59NhFwKKVUs7K5Cj32nCax9dab9YiuNb6oCT3b5E99dM4un1W900y638f31j6ptcJbCUPdh96E4+pXRa+bq5dfjnJm5JcYtFzr4BLJnnz9KEdAAAAlpAGOrCKLpHkAWMXsUG/meRiYxexkysnjo5cM09blYdKYEillPem7a7VfZK8fOiHjqYPV71wyMyL8IxSymcbz7Fu5nmgYfvQRWxxf1G7mR9iYPfGWje/PMmVRpj3+0lek+R/JLl7kmsluXwm6/H9pv987emv/Y/p135/hDqvnOSlI8wLAADABjhKDVhVRyR55dhFbMBRYxewC0clecvYRTCYKyV5XJLnjlwHjOHJSe6dSZOkhVsk+cMkLxgw838mueKAeTv74HQONqh22T/JXWccdmaStzcoZyu7bpKHJfmnsQtZMwtdN9cuv5vFnsB0TiYPs7w4ybtLv9uTSc5OclqSLyd5W5IX1i57JTkkye8m2ZZkUVfjbKtdjil9Xrag+QAAANggDXTgAn0p5TF7+qLpXcuXnL4um+SGSW6UyZ2ht09SWha5g9vVWvctpZyzoPlmVmu9QZJbjV3HLty/1npgKeX0sQthME+stb64lPKDsQuBRSqlnFlrfVSSE9Puv0F/Wms9tpTypc0G1VrvnOQRA9S0K2cneUQp5byGc6yjuyc5YMYxby19zmpRzAD60meP67od1S4XS3KZ6eugJLeZvg7N4hqKyeShmGVvoG/o/a1dlmfd3GXf0qf5url2uW6Sv2w9zw6OS/LE0ucL8wZMr2F4V5J3Tet/QdpesbGjv65dTix9vryg+QAAANgADXQ2pZTyd0n+bpFz1lofmuRVjeJvWUr5cKPstTBtWP9g+vpako9d8Gu11qtmch/tkzP7h9CzOiDJLZO8v/E8m7Gsu8+TyRGWD0ny92MXwmAuneSPkzxh7EJYKht6OGrVlVLeXWt9cZLfazTF/klekuTOmwmptR4wzWnpT0spn248xzra8se3lz5nJzl1+vpMkhOSpHa5ciZ/tn4vkyZwazesXQ4ufT6ygLmamjasL3rd3GVd181/lfbfT5L8KMmjSp/XDxk6bcRvq10OT/IPmayvWrpEJg37VbmeCgAAYEtwBzowmFLKt0opz85kd80HFjDlwQuYYy611r2S/NbYdezBMjf4mU9Xa7362EXASP4oyVcb5t9putN9M56VdkfNJ8lHMuxR81vC9M7tWY+bPi/JmxqUs3RKn/8sfZ6W5MZJ3rmgaY9Y0DyjKX2+Vfqs1bq5djkkizm6/QtJbjF083xHpc+xSW6e5POt5tjB4bXLbRcwDwAAABukgQ4MrpTytST3SvLxxlNdu3H+Ztw1yVXHLmIPblNrvd7YRTCo/ZI8c+wiYAyllP9Kckyy27tvN+sva61XmmdgrfXgJI8btpyf87NMjm4/t+Ec6+p2SS4/45j3lj5b6sqM0ufbmaxvXryA6RZ1fPboSp+1WDfXLiWLeYDn00nusIgjz0ufryS5Q5JPtp4rHn4CAABYKhroQBPTu7V/K20bGS138W1Wi93dX22QaRf6+jmq1nr9sYuAMZRS3pm2R6QfmORFsw6qte6T5OVJ9h66oB08p5TyiYb562zbHGO2D1zDSih9apLHpv3u+2tNjzjfEkqf07P66+YHZHJMfEunJrlb6XNq43n+n9LnO0nunuTbjae6be1y38ZzAAAAsEEa6EAz0w/yX9twiss1zJ5brfVSme/D+N05L22a3Q+fHjfP+tg7yfPGLgJG9MQkX2+Y/4Ba67YZxzwxyU0b1HKBU5L8WcP8dbfl7z+fRelzXpIjk5zeeKrbN85fKqXPqq+bf79x/s+SHFb6fKvxPL9gevrCtiRnN56q9XsIAADABmmaAK29qmH2xRtmb8ZDkuw/cOa7SyknJfnYwLlXT3KngTMZ32G11t8YuwgYQynlJ0ke3XiavtZ66Y184fSqjKc3rOWcJEc7un0+tctNklxzxmGnTI/d3rJKnx+m/ZHTN2+cv4xWct08/XN0u1b5U88pfU5uPMculT4fSvLsxtPcuXZxihAAAMAS0EAHWntPkvMbZS9rA73FTvFX7fTjkBzjvp6eP3YBMJZSytsyOTK9lask+Ys9fVGttWRypPx+DWv5s1LKfzTMX3fb5hizfeAaVtWLkrR8cGOZr+ppZVXXzV3D7GRyP/wyrGv+PJMTP1r6vcb5AAAAbIAGOtDU9C70rzaKb3lP5FxqrddO8t8Gjv1ZkmOn//yaDP99H15rveTAmYzv0Frr3ccuAkb0h0m+2TD/0bXWQ/bwNf89yZ6+ZjM+keQ5DfO3Ase3z6n0+XGSDzacYss10Kd3oX+1UXyTdXPtcvEkR7TI3sGTSp9zGs+xR6XPuZlcydHSUbVr+tAVAAAAG6CBDizCaY1yf9oodzOObpB5Qinlh0lSSvl6kg8MnH9AkgcNnMly+LPpDljYckopP86kgd1siiQvrbVeZKOj1nqVTHYrtnJuJke3j95UWlW1y9WT3GLGYV8tfez4v9CJDbOv0jB7ma3auvnuabu7/b2lz1sb5s+k9HlHknc3nOJScb0SAADA6DTQgUVo9UHgDxrlzmXaqHx4g+idj213jDsbdfMkDxm7CBhLKeUtSV7RcIrrJnnGLn6tT7Khe9Ln9OellI82zN8Kts0x5rihi1hxX2+YvaxX9bS2auvm+zXKvcAer8sYQeuaWr+nAAAA7IEGOrAI+zTK/Xaj3HkdmuSggTPPSPLGnX7uX5KcN/A8t6+1XnPgTDZnqKbEs2ut+w6UBavoD9L2vxdPqLXebMefqLU+MPM1ZzfqU0me1TB/q9g2x5jtA9ew6r7XMHurNtBXZt1cu+yV5F5D5+7gG0mOb5g/r7cm+VrD/Ps0zAYAAGADNNCBRbhso9wvNsqd19ENMt9QSjljx58opXwnybsGnqckOXLgTDbnRRmmMXGdJMcMkAMrqZRyepLfbjjFPkleVmvdO0lqrQcmeWHD+c5L8ohSys8azrH2apcDk9xhxmGnJXnv8NWstB81zN6rdtmKD4Ct0rr51kmu0CD3Av+n9Dm/Yf5cpjX9n4ZTXLV2M18vAQAAwIA00IFFaPXB2icb5c6s1nrxJA9oEL2r49pf3WCuI92XvVR+kuR5A2U9vdZ6wEBZsHJKKW9K8k8Npzg4k53uSfI/k1yp4Vx/WUr5UMP8reI+mX2n75tKP/gJMKvuwIbZ55U+5zTMX1artG6e9SGUWW1vnL8Z2xvn375xPgAAALuhgQ40VWu9YpKrN4p/f6PceTwwwx81enomR0RelNcnGXr34bXiw7pl8+IMc0TolZI8boAcWGW/n+TUhvnPqrU+OskjG87x2ez6znVms22OMdsHrmEdtNx9fMaev2S91C6rtm7+9QaZF/hG6fOxhvmbUvr8R5KvNpyi5XsLAADAHmigA60d0ij3C6WUbzbKnsdRDTJfv6sjeqdHEu+qub4ZLb4P5lRKOTvDNcueVGttdSwsLL1Syg+T/E7DKfZP8pKG+edncnT72Q3n2BJql4slufuMw85K8rYG5ay6X2mYveUa6Gm5bu7TYt3cssn7jobZQ2lZowY6AADAiDTQgdaObpT7uka5M6u1HpTk0AbRuzq+/QItjnF/kKO+l84/ZZhjVy+d5CkD5MDKKqUclz3/3bqs/qqUcvLYRayJuyS5xIxj3l76nNmimBV354bZ326YvayObpQ7+Lq5drl8koOGzt3BKvx917LG69Vu5r+nAAAAGIgGOtBMrfVWSe7ZIjpt77Kd1ZFJhr47/NQk797D1xyXDP5h/iWTHD5wJptQSjk/yVMHintMrfVqA2WxGrq6XF429huS5LFJvjN2ETP6fJKnj13EGtk2x5jtA9ew8mqXyyY5uOEUX26YvXRql1VbN9+sQeaOPtA4fwgta9wryU0b5gMAALAbGuhAE7XWKyT5v43iTyilfKZR9jyObJD52lLKebv7glLKGUne1GBux7gvmVLKG5L82wBR+yV55gA5sLJKKacl6cauYwbnJ3lkKeWssQtZB7XLXknuO+Ow85K8sUE5q+73k+zdMP9LDbOXSu3Sdt3cp8W6+VcaZF7g3CSfbZg/lM8lOadhfssd/gAAAOyGBjowuFrrdZOckOQ6LeKzRA3AWuvt0ub73OgRwy2OIr5TrfXqDXLZnCcPlHN0rfX6A2XBSiqlvD7Ja8euY4P+ppQyxAM0TNw6yRVnHPNvpc/3WxSzqmqXyyX5g8bTfKxx/lKoXVZ13XyNRrlJ8tXSN21MD6L0OS9tT0po+R4DAACwGxrowGBqrQfVWp+d5BNJbtFomleWUj7YKHseLXZrf3WGe27fkuRHA8+/V5KHD5zJJpVS3pfkzQNE7Z3kuQPkwKp7TJLvjV3EHnwxw13hwMS2OcZsH7iGlVa77JPknzO59qWl9zXOH1XtclDt0n7d3KfVurnlw5afb5g9tJa1eqAVAABgJPuMXQCwWmqt+ya5RCYfml4uyQ2T/FqS2ye5bYa/C3xH30zyuIb5M6m17p/kwQ2iN7yrvJRydq11e4Zv5B+V5HkDZ7J5f5zJ/aibfQDu8FrrrZbsYRRYqFLK92qtj0nymrFr2YWa5FGllDPHLmTN3H+OMduHLmJVTY/A//skd2s81ZdKn283nqO52mWd180tm7vfbJg9tJa1aqADAACMRAMduEBXa13mO2HPSnJ4KeX0sQvZwWFJLtUg99Uzfv2rMnwD/Xq11tuUUj4wcC6bUEr5eK31VUmOGCDu+UnuNEAOrKxSymtrrQ9O8oCxa7kILyqlnDR2EeukdrlBkuvNOOwTpc9XWtSzamqXq2VyT/cdFjDdcQuYYzO62mX51819Tm84x5UbZi/76SA7alnrVRpmAwAAsBuOcAdWwTlJfrOU8qGxC9lJi+PbP11K+fiMY96ZNh/etfj+2LynJfnZADl3rLW23kEIq+D3kpw2dhE7+UqSp4xdxBraNseY7QPXsHJql6vWLs/N5KjxRTTPk0mjnvlM1s19Wq+bL94wWwN94oCG2QAAAOyGHejAsjsjyUNLKW8au5Ad1VqvmuQuDaI3fHz7BUop59ZaX5fkdweu5SG11seVUn46cC6bUEr5Sq31JZnc37xZf1ZrfXsppQ6QBSuplPLdWutjM7nTeRlccHT7GWMXsoa2zTFm+8A1LK3a5WJJDkxymSS/kuQ2mRwzfkiSfRdYyqdKn48ucL51Mlk391nEunn/htmnN8we2ukNs1u+xwAAAOyGBjqwzL6SybHtp4xdyEV4eNqc4jHr8e07jhu6gX5gJnfFLuv9wFvZs5Mcncm9qptxiyQPjt9jtrhSyqumR7lvG7uWJH9XSnnX2EWsm9rlKkluOeOwr69wI3fZjxjfneePXcCKmqyb+5yyoPlaNnfPbpg9tCFOBdoVDXQAAICROMIdWEY1ycuS3HRJm+dJcmSDzA+VUr4459j3JvnmkMVMOcZ9CZVSvpvkrweKe06t1QN1MHkI6Qcj1/C1JE8auYZ1db8kZcYxy34P9zr6YuY4jWeLu3DdvLjmedK2uduyKT20ls1+R7gDAACMRAMdWDYfSHLbUsqjSyk/GbuYi1JrvVWSGzSInvsD4+kR3K8dsJYL3K3WeuUGuWzeC5J8f4Cc6yQ5ZoAcWGmllFOTPG7kMo4ppfzXyDWsq21zjNk+cA3s2ZNKn/PGLmKFTNbNfR5d+ixs3Vy7lLQ9ze6chtlDa1nrxRpmAwAAsBsa6MAyqEneluRupZTbllJOHrugPWixK/v8bL4BPu/x77uzd5IjGuSySdMHTJ43UNzTa612ObHllVL+KVnI3cEX5aWllHeMNPdaq10uleSOMw77YZKTGpTDrv1L6fOvYxexAi5cN/e5bemz8HVz6VOTnNtwin0bZg+tZa2rdJQ9AADAWtFAB8b0uSTPSnK9UsrdSylvH7ugPam1XizJQxtEn1RK+dZmAkopH8rk6NOhOcZ9ef1tJkc+b9aVk/z+ADmwDn47yekLnvMbSZ6w4Dm3knsm+aUZx7y59E0bhPy8/0zymLGLWHIXrpv73L30GXvdfFbD7Fn/vI6pZa0t32MAAAB2QwMdGNPemdztd8mxC5nBfZNctkHuULvHXzNQzo5+rdZ6cINcNqmUcnaSZw4U90e11hb/bsNKKaV8O8kfLHjaR5dSfrzgObeSbXOM2T5wDezaWUnuV/p8d+xCltyyrZs10CdaHrOugQ4AADASDXRgTNfJZMfdR2utx9daf33sgjagxW7sc5O8bqCsue9R3wO70JfXK5N8aoCcSyd58gA5sPJKKa9I8pYFTfcPpZS3LmiuLad22TeTHeiz+GmSExqUwy86L8lvlT4fHruQFXDhurnL8bXL2Ovmls3dSzfMHlrLWs9smA0AAMBuaKADy+KeSU6utT6v1rqUu05qrVdMco8G0W8rpZw2RFAp5VNJPjlE1k4etqy/L1tdKeX8JE8dKO6xtdarDpQFq+6/J/lR4zm+leQPG8+x1d0psze43lH6nNGiGH7O2UkeWPocO3YhK2iybu7yvNqNtlu7ZXP3lxtmD+0KDbM10AEAAEaigQ4sk72TPCXJe2qtlxu7mItwRJJ9GuQOvWt8qOPgd3S5JPdukMsASinHJXn/AFH7Zbgj4WGllVK+meTxjaf57VJK6yb9Vnf/OcZsH7oIfsEPktyr9N7rTbhw3dxljHXzqQ2zV6mB3rLWlu8xAAAAu6GBDiyjWyd5X631GmMXspMWx5ifleS4gTNbNNATx7gvu6GOX39ErfVXB8pifH1ZLseM/YbMopTy8iRfbhT//lLKmxtlk6R2KUnuN+Ow85O8sUE5XOh9SW5W+pw4diFrYrJu7rLodfPXG2av0mk4LWtt+R4DAACwGxrowLK6fpK31lovM3YhSVJrvXmSmzSIflMp5SdDBpZSvpTkQ0NmTt2r1trymEo2oZTy3iTHDxC1d5LnDpAD66LVPb8t7w9m4paZvbn1gdLnuy2KIWck+eMkh5Y+3xi7mDUzWTd3WeS6ueXv4fUaZg+tZa3+nAAAAIxEAx1YZtdPcuyS3L3davf10Me3t8zdN8nDGuQynKckqQPkPKDWessBcgDGtG2OMdsHroHJrv5/SnK90ufPSp/zxi5oTU3WzYu7E73l7uhr1q7JtUmDql32TnKthlPYgQ4AADASDXRg2R2a5PljFlBr3SdtGsc/zjA7hi/KazL5wHpojnFfYqWUjyf554HiRv1zBzAA95+P64wkfSaN8yNLn2+PXdAWcGgW99/vrzXM3ieTBwKW3fWSpg8stHyPAQAA2I2lf6obWJi+lPKYi/qFWut+SS6d5LJJbpTk5knuleRmC6rtcbXW40sp71jQfDu7d5IWR5f/aynl7Aa5KaV8u9b63iSHDBx981rrTaaNWpbT05I8OJMTAzbjTrXWu5ZS3j5ATQALVbtcJ8kNZxz2qdLniy3q2ULOTfLOJK9Ncmzpc/q45TTTlz4XvW7uMv66ucvxpU/rdfMpjfNvneSTjefYrNs0zK5JrLcBAABGooEO7FEp5adJfprkO0k+k+R1SZ5aa71RJndZtj7WuyT5x1rrjUoppzee66K02nV9VK11FXd0H5Xk8WMXwUUrpXyl1vr3yUV/sD+j59da31FKGeJYeIBFOmyOMduHLmILOD/JJ5KcNH2dWPr8YNySxlX6XPS6ucti181dbtTyAYbS57u1yzeSXL3RFLdJ8rJG2UO5dcPsz5c+P26YDwAAwG5ooANzK6V8KskRtdYXZ3JsdKsP0JLkKkmem6RrOMcvqLVeLpMd6FzoiFrrH5VSzh27EHbp2UmOTnKJTebcIsmDMtlJCLBK5jm+/bjBq1hdP8ukCXx2krOSfC+ThvCpSb6Z5LOZNIc/O20Yswelz2Td3GWd1s0fTrvv4y6NcofUssaPNMwGAABgDzTQgU0rpbyv1vobmRzZeYOGU/1OrfVlpZSPNZxjZw9L27sNV9EVk9w9yZvHLoSLVkr5bq31rzM5zn2znlNrPXaAHICFqF1+ObMfrfytTJqB62KXR4wzrtLnfbXLYtbNXV5W+rRcN3848532sBHXqF1uVvrmR8XPpXa5cZJrNpxinf4+AgAAWDl7jV0AsB5KKf+Z5K6Z7EpqZa8kfcP8i7KKR6wvwtFjF8Ae/WWS7w+Qc90kjxogB2BR7pfZ/z/nuNLHdRUsROmzLuvm9zbO39Y4fzO2Nc5v/d4CAACwGxrowGBKKd9Kcngmx362cptaa6udLj9nesf7wYuYawXdt9Z6mbGLYNdKKT9O8ryB4p4RawZgdWybY8z2gWuA3Sp9FrNu7prtEE+S9yc5rWH+0bVbvvVH7VKSPKLhFP8ZR7gDAACMaun+ZxRYbaWUDyV5euNpnl1rXcTfX3af79rFkjx07CLYo79N8vUBcq6cZN8BcgCaql0unuTOMw77UZJ3D18N7F7ps5h1c6MmdOlzXpLjW2RPHZTkHg3z53W3tD2+/U1OxAAAABiXBjrQwgvSdtfEjZIc0TA/tda9k/xWyznWwNFjF8DulVLOzmT3OMBWcY8k+8045s2lzzktioENWPV18xsaZifJkxrnz6N1Ta3fUwAAAPZAAx0YXCnl/CS/lzTdOfHMWus+DfPvlsmuW3btVrXW649dBHv0yiSfHrsIgAXZNseY44YuAjaq9FnMurlLq3XzCUnObJSdJIfULndpmD+T2uWOSe7UcIqfJHlnw3wAAAA2QAMdaKKU8sEk/9xwimul7W4ax7dvjPdpyU0faHnq2HUAtDZtEN57xmFnJ3lLg3Jgw0qflV03lz7/lba1J8kLGj4AsGG1y96ZnBjQ0itLn7MazwEAAMAeaKADLT09ybkN8/9ketT6oGqtBya5/9C5a+rhC7qPnk0opWxP8oGx6wBo7A5JLjPjmBNLn5+0KAZm1H7dPGkAt9A3yr3AzbIcR7k/McnBjef428b5AAAAbICmB9BMKeXLSV7RcIrrJHlYg9yHZPb7U7eqqybLc6wmu/XksQsAaGzbHGO2D1wDzKX0WdV1c0qfU5K8v0X2Dp5eu9yy8Ry7VLscnOQZjad5V+lduwMAALAMNNCB1p6XtrtpntpgB7RjyWfj/VoBpZST4phiYL3db8avr0ne0KIQmFP7dXPX7DOA/90o9wIXS7K9drly43l+Qe1ypUwetmn9gO3fNM4HAABggzTQgaZKKV9J8v81nOJXkzx0qLBa6/WS3GaovC3isFrrpcYugg15SiYNI4C1UrvcPMlBMw47ufQ5tUU9MI/SZ6XWzTv5lyQfbZR9gaskeWvt8suN5/l/apcrJDkhydUaT3Vy6Z2IAQAAsCw00IFFeG6S8xrm/8mAu9Dtpp7d/kkePHYR7Fkp5T+SvGrsOgAa2DbHmO0D1wBDaL9ubrALvfSpmdwR3tqNk5xUu/xK64lql4OSnJTkpq3nymLeOwAAADZIAx1orpTyxbRt2t0gyYM2GzJtwj988+VsSR48WB1PS3LO2EUADGzbHGOOG7oI2KzSZyXWzRel9DkxyfEtsnfyq0k+Vrsc1mqC2mVbko8luX6rOXawvfR53wLmAQAAYIM00IFFeU6S8xvmP63WWjaZcackVx+imC3odrXW64xdBHtWSvlykpeMXQfAUKY7UW8y47DPlj6fa1AODKH9urnLZtfNu/KHSc5qlL2jA5McW7scW7sMtgatXa5du7w+yb8mucxQubtxRuw+BwAAWDoa6MBClFI+l+Q1Dae4UZIHbDKj1S7qV5UlkuRtjb7PIxvlMrxnZ/KBLcA62DbHmO0D1wCDmT7csezr5os0rf1JLbJ34bAkn65dXl27HDLPgwG1S6ldDq1dXp3kM0kOH7zKXfvD6akDAAAALJF9xi4A2FKek+QhaffwztNrra8vpdRZB9ZaL5F2H5Yt253Tr05ytwa5R9ZanzHP+89ilVK+U2v96yR/MnYtAAPYNseY7QPXAENrv27u8vrp3eWDKn1eVLvcK8k9h87ehX0zea8ekuR7tcs7krw/yWeTfDHJj5L8V5KS5BJJLp3k2pkcz37bJHdJcoUF1bqjN5beqUAAAADLyA50YGFKKZ9O8vqGU9w4mfsuxAclOWDAWi7wwyRvbZC7GccmObtB7kFJDmmQSxsvSHLa2EUAbEbtcrkkt5tx2LeTfLBBOTCY0meZ180b8cgk322YvytXSPKbSV6Y5O1JvpLkB0l+lsn697QkX57+2gunXztG8/zUJMeMMC8AAAAboIEOLNqzk+F3uuxg3rvQjx66kKnXl1J+1ih7LqWUH6VdU//oRrkMrJTy4yTPG7sOgE26T5K9Zxzzhha7bqGB9uvmRnehlz6nJrlvkjNb5K+4M5Lcp/SjPGAAAADABmigAwtVSvlE2h6berMk95tlQK31mklu36Sa5Tu+/QKvbpT7gFrrxRtlM7w+yTfGLgJgE7bNMea4oYuAFkqfpVs3z6L0+WCSByc5r9UcK+jcJA8ufT4ydiEAAADsmgY6MIZnNc5/+oxff2TSZPfNqUne3SB3CG9Imx1Bl0jygAa5NFBKOTvJM8auA2Aetcv+Se4247AfJzmxQTnQyrKtm2dS+rw5ye+0nGPF/G7pc/zYRQAAALB7GujAwpVSTknyxoZT3KLWep+NfOH0uPcjG9XxmlLK+Y2yN6WUckaSNzWKP7pRLm28Msmnxy4CYA53TXLAjGPeUvos1dUqsDulzylpvW7usqF187xKn5dlct/3Vt6Jfl6SY6bvBQAAAEtOAx0Yy7Lsprl9kms1qmFZj2+/QKtj3A+ttR7UKJuBlVLOS/LUsesAmMO2OcZsH7gGWIRlWTfPrfR5eZLDk5zVeq4ldFaSw6fvAQAAACtAAx0YRSnlw0ne0nCKW9Za77mBrzuq0fxfKaX8e6PsoRyf5EcNckuShzfIpZFSyvYkJ49dB8BG1S57JTPvmv1Z4uhkVk/p037d3GUj6+ZNKX3ekMnJEae1nmuJnJbkrtPvHQAAgBWhgQ6MqfVumt3e7VxrPSDJgxrNvey7zy+4//q4RvGtHkygnSePXQDADG6X5AozjnlX6fPjFsXAAoy6bh5K6fNvSW6S5MRFzDeyE5PcZPo9AwAAsEI00IHRlFJOTvL2hlP8Rq317rv59cOTXLLR3EvfQJ9qdYz7dWqt/61RNg2UUt6T5ISx6wDYoPvPMabVQ2PQXOnTft3cZXfr5sGUPt/OZCf6k5Ocs4g5F+ycJE/JZOf5t8cuBgAAgNlpoANj+9PG+bu707HVLulPlVI+2Sh7aG9P8v1G2Xahr56nJKljFwGwAbM20Gs00Fl9Y66bB1X6nF/6/HmSWyZ596LmXYB3J7lV6fP80uf8sYsBAABgPhrowKhKKf+W5F0Np7htrfUuO/9krfXqSe7UaM5/bpQ7uFLKuUmObRT/4Frr/o2yaaCUckranUoAMIja5cZJrj3jsA/ZCcqqmx4F3nbd3OUX1s0tlT7/UfrcMcm2JJ9f5NwD+0KSw0qfO5Y+p4xdDAAAAJujgQ4sgzHudHx42v0duGoNyFb1XjqTD0NZLU/Leh6nCqyPeY5v3z50ETCStbgLfWelz3FJfi3Jo5N8fIwa5vSJTGq+Uen9PQMAALAuNNCB0ZVS3p3kpIZT3K7Wesedfu7IRnP9eynly42yW3lPkv9slO0Y9xVTSvlSkpeOXQfAbmybY8z2gWuAUZQ+707rdXOXndfNC1H6nFP6vKz0uWmSQ5O8Psl5Y9SyB+dlcoLTHUufm0xr9vAhAADAGtFAB5bFwnbT1FpvneRXG82zarvPU0o5P8lrG8XftdZ61UbZtPOsJGeMXQTAzmqXqyU5eMZhXyh9PtOiHhjJWu5C31Hp857S54FJrpTkEUmOS3LmiCWdOa3hkUmuVPo8YPowAwAAAGuojF3Asqtd6mYzSu99BgCAzapdHpPkhTMOe0Hp86QW9QCLU7vsn+ROSW6d5JbT12UbTXdakg8n+VCSk5OcWPqc1WguAAAAlsw+YxcAAACwQe4/hy1q2sB+8/SVJKldrp3khkkOSnKNJFefvi6b5IAk++/wSpKzpq8zpz/+IMk3knx9+vpakk+XPqt2JRMAAAAD0kAHAACWXu1yYJJDZhz2nUx2jwJrqPT5UpIvjV0HAAAA68Ud6AAAwCq4d5J9ZxzzhtLn/BbFAAAAALCeNNABAIBV4Ph2AAAAAJrTQAcAAJZa7XKxJPeYcdh/JXlng3IAAAAAWGMa6AAAwLK7c5JLzjjmhNLn7BbFAAAAALC+NNABAIBlt22OMdsHrgEAAACALUADHQAAWFq1S0ly3xmHnZPkzQ3KAQAAAGDNaaADAADL7NZJrjTjmPeUPqc3qAUAAACANaeBDgAALLNtc4zZPnANAAAAAGwRGugAAMAyu/8cY44bvAoAAAAAtoR9xi4AAABgV0qf649dAwAAAABbhx3oAAAAAAAAABANdAAAAAAAAABIooEOAAAAAAAAAEk00AEAAAAAAAAgiQY6AAAAAAAAACTRQAcAAAAAAACAJBroAAAAAAAAAJBEAx0AAAAAAAAAkmigAwAAAAAAAEASDXQAAAAAAAAASKKBDgAAAAAAAABJNNABAAAAAAAAIIkGOgAAAAAAAAAk0UAHAAAAAAAAgCQa6AAAAAAAAACQRAMdAAAAAAAAAJJooAMAAAAAAABAEg10AAAAAAAAAEiigQ4AAAAAAAAASTTQAQAAAAAAACCJBjoAAAAAAAAAJNFABwAAAAAAAIAkGugAAAAAAAAAkEQDHQAAAAAAAACSaKADAAAAAAAAQBINdAAAAAAAAABIooEOAAAAAAAAAEk00AEAAAAAAAAgiQY6AAAAAAAAACTRQAcAAAAAAACAJBroAAAAAAAAAJBEAx0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFhf/z9WAefh1RZ7ygAAAABJRU5ErkJggg==" alt="Trainify Pro" />
+  </div>
+
+  <!-- Center: Nav -->
+  <nav class="nav-tabs nav-center">
+    <button class="nav-tab active" id="tabDash"  type="button">Dashboard</button>
+    <button class="nav-tab"        id="tabLogg"  type="button">Träningslogg</button>
+    <button class="nav-tab"        id="tabGolf"  type="button">Golf</button>
+  </nav>
+
+  <!-- Right: Status pills -->
+  <div class="topbar-right" data-build="app_v3">
+    <div class="status-pill"><span class="status-dot"></span>Live</div>
+    <div class="status-pill" id="pillYear">År: —</div>
+    <div class="status-pill soft" title="Build">v40-stable</div>
+    <button class="btn-ghost" id="btnSignOut" type="button" style="margin-left:8px;">Logga ut</button>
+  </div>
+</header>
+
+<div class="page-wrap">
+
+  <!-- FORM centered top -->
+  <div class="top-form-row">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Lägg till pass</div>
+          <div class="panel-subtitle">Registrera ett nytt träningspass manuellt.</div>
+        </div>
+      </div>
+      <div class="panel-body">
+        <form id="activity-form" class="form" autocomplete="off">
+
+          <div class="field">
+            <label class="field-label">Datum</label>
+            <div class="date-picker-wrap">
+              <div class="date-display" id="dateDisplay" tabindex="0" role="button" aria-label="Välj datum">
+                <span id="dateDisplayText" class="placeholder">Välj datum…</span>
+                <span class="cal-icon">📅</span>
+              </div>
+              <div class="calendar-popup" id="calendarPopup">
+                <div class="cal-top">
+                  <button class="cal-nav-btn" id="calPrev" type="button">‹</button>
+                  <span class="cal-month-label" id="calMonthLabel"></span>
+                  <button class="cal-nav-btn" id="calNext" type="button">›</button>
+                </div>
+                <div class="cal-grid">
+                  <div class="cal-weekdays">
+                    <div class="cal-wd">Mån</div><div class="cal-wd">Tis</div><div class="cal-wd">Ons</div>
+                    <div class="cal-wd">Tor</div><div class="cal-wd">Fre</div><div class="cal-wd">Lör</div>
+                    <div class="cal-wd">Sön</div>
+                  </div>
+                  <div class="cal-days" id="calDays"></div>
+                </div>
+                <div class="cal-time">
+                  <div>
+                    <div class="cal-time-label">Klockslag</div>
+                    <div class="cal-time-inputs">
+                      <input type="number" id="calHour"   min="0" max="23" placeholder="HH" value="12">
+                      <input type="number" id="calMinute" min="0" max="59" placeholder="MM" value="00">
+                    </div>
+                  </div>
+                  <button class="cal-confirm" id="calConfirm" type="button">Bekräfta</button>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="start_time" required />
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="sport">Sport</label>
+            <select id="sport" required>
+              <option value="Löpning">🏃 Löpning</option>
+              <option value="Styrketräning">💪 Styrketräning</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="name">Passnamn (valfritt)</label>
+            <input type="text" id="name" placeholder="t.ex. Intervaller / Helkropp" />
+          </div>
+
+          <div class="row3">
+            <div class="field">
+              <label class="field-label" for="duration_h">Timmar</label>
+              <input type="number" id="duration_h" min="0" placeholder="0" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="duration_min">Minuter</label>
+              <input type="number" id="duration_min" min="0" max="59" placeholder="45" />
+            </div>
+            <div class="field" id="distanceField">
+              <label class="field-label" for="distance_km">Distans (km)</label>
+              <input type="number" id="distance_km" min="0" step="0.01" placeholder="10.00" />
+            </div>
+          </div>
+<div class="row2" id="loadFieldRow" style="margin-top:10px;">
+            <div class="field" id="loadField">
+              <label class="field-label" for="training_load">Training Load (valfritt)</label>
+              <input type="number" id="training_load" min="0" step="1" placeholder="t.ex. 85" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="notes">Anteckningar (valfritt)</label>
+            <input type="text" id="notes" placeholder="Känsla, upplägg, vikter…" />
+          </div>
+          <button class="btn-primary" type="submit">Spara pass</button>
+          <div id="msg" class="msg" aria-live="polite"></div>
+        </form>
+      </div>
+      <div class="panel-footer"></div>
+    </section>
+  </div>
+
+  <!-- DASHBOARD / LOG -->
+  <div class="main-content">
+  <div class="panel" style="padding:0; overflow:visible;">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="chip chip-accent" id="countChip">— pass</div>
+        <div class="chip" id="lastChip">Senast: —</div>
+      </div>
+      <div class="toolbar-right year-select-wrap">
+        <select id="yearSelect"><option value="">År…</option></select>
+        <button class="btn-ghost" id="reloadBtn" type="button">↻ Uppdatera</button>
+      </div>
+    </div>
+
+    <div class="view active" id="viewDash">
+      <div class="panel-body" style="padding-top:22px; padding-bottom:22px;">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Totalt antal pass</div>
+            <div class="stat-value" id="statTotalSessions">—</div>
+            <div class="stat-sub" id="subYear">Valda året</div>
+          </div>
+          <div class="stat-card blue">
+            <div class="stat-label">Total tid</div>
+            <div class="stat-value" id="statTotalHours">—<span class="stat-unit">h</span></div>
+            <div class="stat-sub">Valda året</div>
+          </div>
+          <div class="stat-card violet">
+            <div class="stat-label">Löpning distans</div>
+            <div class="stat-value" id="statRunKm">—<span class="stat-unit">km</span></div>
+            <div class="stat-sub">Valda året</div>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-card-title"><span class="sport-badge strength">💪 Styrketräning</span></div>
+              <div class="chart-card-meta">Totala timmar / månad</div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartStrength"></canvas></div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <div class="chart-card-title"><span class="sport-badge run">🏃 Löpning</span></div>
+              <div class="chart-card-meta">Sträcka (mil) + tid / månad</div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartRun"></canvas></div>
+          </div>
+
+          <div class="chart-card span-2">
+            <div class="chart-card-header">
+              <div class="chart-card-title"><span class="sport-badge run">📈 Training Load</span></div>
+              <div class="chart-card-meta">Summa / vecka (valda året)</div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartRunLoad"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="records-grid">
+          <!-- Personal Records -->
+          <section class="records-card">
+            <div class="records-card-hdr lock-row">
+              <div>
+                <div class="records-card-title">🏅 Personliga rekord</div>
+                <div class="records-card-sub">Spara dina bästa tider – visas som en snygg lista.</div>
+              </div>
+              <div class="pill soft lock-pill" id="lockPill" title="Klicka för att låsa upp redigering">🔒 Låst</div>
+            </div>
+            <div class="records-body">
+              <form id="prForm" class="mini-form" autocomplete="off">
+                <div class="row2">
+                  <div class="field">
+                    <label class="field-label" for="prType">Distans</label>
+                    <select id="prType" required>
+                      <option value="5 km">5 km</option>
+                      <option value="10 km">10 km</option>
+                      <option value="Halvmarathon">Halvmarathon</option>
+                      <option value="Marathon">Marathon</option>
+                      <option value="Ultra">Ultra</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="prTime">Tid (hh:mm:ss)</label>
+                    <input id="prTime" type="text" placeholder="t.ex. 00:19:45" required />
+                  </div>
+                </div>
+                <div class="row3">
+                  <div class="field">
+                    <label class="field-label" for="prDate">Datum</label>
+                    <input id="prDate" type="date" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="prEvent">Tävling (valfritt)</label>
+                    <input id="prEvent" type="text" placeholder="t.ex. Göteborgsvarvet" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="prNotes">Notis</label>
+                    <input id="prNotes" type="text" placeholder="t.ex. bra form / kuperat" />
+                  </div>
+                </div>
+                <button class="btn-primary" type="submit" id="prSubmitBtn">Spara PR</button>
+                <div id="prMsg" class="msg" aria-live="polite"></div>
+              </form>
+
+              <div class="list-mini" id="prList">
+                <div class="empty-state" style="margin:0; padding:18px 14px;">
+                  <div class="empty-state-icon">✨</div>
+                  <div class="empty-state-title">Inga PR ännu</div>
+                  <div class="empty-state-sub">Lägg in din bästa tid så dyker den upp här.</div>
+                </div>
+              
+              <div class="pr-trend">
+                <div class="pr-trend-top">
+                  <div class="pr-trend-title">PR-trend</div>
+                  <select id="prTrendSelect" aria-label="Välj distans för PR-trend">
+                    <option value="5 km">5 km</option>
+                    <option value="10 km">10 km</option>
+                    <option value="Halvmarathon">Halvmarathon</option>
+                    <option value="Marathon">Marathon</option>
+                    <option value="Ultra">Ultra</option>
+                  </select>
+                </div>
+                <div class="pr-trend-canvas"><canvas id="chartPRTrend"></canvas></div>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- Race Results -->
+          <section class="records-card">
+            <div class="records-card-hdr">
+              <div>
+                <div class="records-card-title">🏁 Tävlingar & resultat</div>
+                <div class="records-card-sub">Logga lopp, distanser och tider – perfekt för historik.</div>
+              </div>
+              <div class="pill soft">RACE</div>
+            </div>
+            <div class="records-body">
+              <form id="raceForm" class="mini-form" autocomplete="off">
+                <div class="row2">
+                  <div class="field">
+                    <label class="field-label" for="raceName">Tävling / pass</label>
+                    <input id="raceName" type="text" placeholder="t.ex. Lidingöloppet" required />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="raceDistance">Distans</label>
+                    <input id="raceDistance" type="text" placeholder="t.ex. 15 km / 5 km / 50 km" required />
+                  </div>
+                </div>
+                <div class="row3">
+                  <div class="field">
+                    <label class="field-label" for="raceTime">Tid (hh:mm:ss)</label>
+                    <input id="raceTime" type="text" placeholder="t.ex. 01:29:10" required />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="raceDate">Datum</label>
+                    <input id="raceDate" type="date" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="raceLocation">Plats (valfritt)</label>
+                    <input id="raceLocation" type="text" placeholder="t.ex. Stockholm" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="field-label" for="raceNotes">Anteckningar (valfritt)</label>
+                  <input id="raceNotes" type="text" placeholder="t.ex. väder, upplägg, placering…" />
+                </div>
+                <button class="btn-primary" type="submit" id="raceSubmitBtn">Spara resultat</button>
+                <div id="raceMsg" class="msg" aria-live="polite"></div>
+              </form>
+
+              <div class="filter-row filters" style="display:flex; gap:10px; align-items:end; margin:10px 0 12px; flex-wrap:wrap;"><div class="field" style="min-width:160px;"><label class="field-label" for="raceYearFilter">Filtrera år</label><select id="raceYearFilter"><option value="all">Alla år</option></select></div><div class="field" style="min-width:160px;"><label class="field-label">&nbsp;</label><button class="btn-ghost wide" id="btnClearRaceFilter" type="button">Rensa</button></div></div>
+<div class="list-mini" id="raceList">
+                <div class="empty-state" style="margin:0; padding:18px 14px;">
+                  <div class="empty-state-icon">🗓️</div>
+                  <div class="empty-state-title">Inga tävlingar ännu</div>
+                  <div class="empty-state-sub">När du lägger till ett resultat visas det här.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="view" id="viewLogg">
+      <div class="section-hdr">
+        <div class="section-hdr-title">Senaste pass</div>
+        <div class="section-hdr-sub">Visar upp till 60 pass</div>
+      </div>
+      <div class="filter-row filters" style="display:flex; gap:10px; align-items:end; margin:10px 0 14px; flex-wrap:wrap;">
+        <div class="field" style="min-width:160px;">
+          <label class="field-label" for="logYearFilter">År</label>
+          <select id="logYearFilter"><option value="all">Alla år</option></select>
+        </div>
+        <div class="field" style="min-width:160px;">
+          <label class="field-label" for="logMonthFilter">Månad</label>
+          <select id="logMonthFilter">
+            <option value="all">Alla månader</option>
+            <option value="1">Januari</option><option value="2">Februari</option><option value="3">Mars</option><option value="4">April</option>
+            <option value="5">Maj</option><option value="6">Juni</option><option value="7">Juli</option><option value="8">Augusti</option>
+            <option value="9">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:160px;">
+          <label class="field-label">&nbsp;</label>
+          <button class="btn-ghost wide" id="btnClearLogFilters" type="button">Rensa filter</button>
+        </div>
+      </div>
+
+      <div id="activities" class="empty-state">
+        <div class="empty-state-icon">⏳</div>
+        <div class="empty-state-title">Laddar aktiviteter…</div>
+      </div>
+    </div>
+  
+    <div class="view" id="viewGolf">
+      <div class="panel-body" style="padding-top:22px; padding-bottom:22px;">
+        <div class="golf-grid">
+          <!-- Left: form -->
+          <section class="panel" style="margin:0;">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">⛳ Ny runda</div>
+                <div class="panel-subtitle">Lägg in datum, bana, 9/18, slag, poäng och statistik.</div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <form id="golfForm" class="form" autocomplete="off">
+                <div class="row2">
+                  <div class="field">
+                    <label class="field-label" for="gDate">Datum</label>
+                    <input id="gDate" type="date" required />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gCourse">Bana</label>
+                    <input id="gCourse" type="text" placeholder="t.ex. Bro Hof" required />
+                  </div>
+                </div>
+
+                <div class="row2">
+                  <div class="field">
+                    <label class="field-label" for="gHoles">Hål</label>
+                    <select id="gHoles" required>
+                      <option value="9">9 hål</option>
+                      <option value="18" selected>18 hål</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gWeather">Väder</label>
+                    <input id="gWeather" type="text" placeholder="t.ex. sol, 8°C, vind" />
+                  </div>
+                </div>
+
+                <div class="row2">
+                  <div class="field">
+                    <label class="field-label" for="gStrokes">Antal slag</label>
+                    <input id="gStrokes" type="number" min="1" step="1" placeholder="t.ex. 92" required />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gPoints">Poäng</label>
+                    <input id="gPoints" type="number" min="0" step="1" placeholder="t.ex. 32" />
+                  </div>
+                </div>
+
+                <div class="stat-row">
+                  <div class="field">
+                    <label class="field-label" for="gDoubleBogey">Dubbelbogey</label>
+                    <input id="gDoubleBogey" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gBogey">Bogey</label>
+                    <input id="gBogey" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gPar">Par</label>
+                    <input id="gPar" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gBirdie">Birdie</label>
+                    <input id="gBirdie" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gEagle">Eagle</label>
+                    <input id="gEagle" type="number" min="0" step="1" value="0" />
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="gNotes">Notis</label>
+                    <input id="gNotes" type="text" placeholder="t.ex. nya järn, bra puttning" />
+                  </div>
+                </div>
+
+                <button class="btn-primary" type="submit" id="gSubmit">Spara runda</button>
+                <div id="gMsg" class="msg" aria-live="polite"></div>
+              </form>
+            </div>
+            <div class="panel-footer">Tips: Summan av DB+B+P+Bi+E bör matcha 9/18.</div>
+          </section>
+
+          <!-- Right: stats + list -->
+          <div style="display:grid; gap:14px;">
+            <section class="panel" style="margin:0;">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-title">📈 Statistik</div>
+                  <div class="panel-subtitle">Slag (stark) + poäng (blekare) över tid, och fördelning av resultat.</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="row2" style="align-items:end;">
+                  <div class="field">
+                    <label class="field-label" for="gFilterHoles">Filter</label>
+                    <select id="gFilterHoles">
+                      <option value="all" selected>Alla rundor</option>
+                      <option value="18">Endast 18 hål</option>
+                      <option value="9">Endast 9 hål</option>
+                    </select>
+                  </div>
+                  <div class="hint-text" id="gStatHint">—</div>
+                </div>
+                <div style="position:relative; height:220px; margin-top:10px;"><canvas id="chartGolfTrend"></canvas></div>
+                <div style="position:relative; height:220px; margin-top:14px;"><canvas id="chartGolfDist"></canvas></div>
+              </div>
+              <div class="panel-footer">Trend: slag (stark) + poäng (blekare).</div>
+            </section>
+
+            <section class="panel" style="margin:0;">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-title">📒 Rundor</div>
+                  <div class="panel-subtitle">Senaste rundorna (redigera / radera).</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="golfList" class="list-mini"></div>
+              </div>
+              <div class="panel-footer"><code></code> </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+
+</div><!-- /page-wrap -->
+
+<script>
+// Global shims for inline onclick handlers
+window.deletePR = window.deletePR || (async (id)=>{ console.error('deletePR not wired'); alert('deletePR saknas (uppdatera app.html).'); });
+window.editPR = window.editPR || (async (id)=>{ console.error('editPR not wired'); alert('editPR saknas (uppdatera app.html).'); });
+window.deleteRace = window.deleteRace || (async (id)=>{ console.error('deleteRace not wired'); alert('deleteRace saknas (uppdatera app.html).'); });
+window.editRace = window.editRace || (async (id)=>{ console.error('editRace not wired'); alert('editRace saknas (uppdatera app.html).'); });
+window.deleteGolf = window.deleteGolf || (async (id)=>{ console.error('deleteGolf not wired'); alert('deleteGolf saknas (uppdatera app.html).'); });
+window.editGolf = window.editGolf || (async (id)=>{ console.error('editGolf not wired'); alert('editGolf saknas (uppdatera app.html).'); });
+
+window.deleteActivity = window.deleteActivity || (async (id)=>{ console.error('deleteActivity not wired'); alert('deleteActivity saknas (uppdatera app.html).'); });
+window.editActivity = window.editActivity || (async (id)=>{ console.error('editActivity not wired'); alert('editActivity saknas (uppdatera app.html).'); });
+
+(async () => {
+const SUPABASE_URL      = "https://pmstnkmloyipsrveqidg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Mb-z3MZvMP_KC09dMXE-AQ_AauF362I";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_FUNCTIONS_URL = SUPABASE_URL.replace('.supabase.co', '.functions.supabase.co');
+
+// ── FIT/Series helpers (karta & kurvor) ───────────────────────────────────────
+let _analyzeCurrentId = null;
+let _analyzeMap = null;
+let _analyzePolyline = null;
+
+async function fetchActivitySeries(activityId){
+  try{
+    const { data, error } = await sb
+      .from("activity_series")
+      .select("series")
+      .eq("activity_id", Number(activityId))
+      .single();
+    if(error) return null;
+    return data?.series ?? null;
+  } catch(_e){
+    return null;
+  }
+}
+
+function renderAnalyzeMap(series){
+  const wrap = document.getElementById("analyzeMapWrap");
+  const el = document.getElementById("analyzeMap");
+  if(!wrap || !el) return;
+
+  // Inget att visa
+  if(!series || !Array.isArray(series.lat) || !Array.isArray(series.lng)){
+    wrap.style.display = "none";
+    return;
+  }
+
+  const pts = [];
+  const n = Math.min(series.lat.length, series.lng.length);
+  for(let i=0;i<n;i++){
+    const la = series.lat[i], lo = series.lng[i];
+    if(typeof la === "number" && typeof lo === "number" && isFinite(la) && isFinite(lo)){
+      pts.push([la, lo]);
+    }
+  }
+
+  if(pts.length < 2 || typeof window.L === "undefined"){
+    wrap.style.display = "none";
+    return;
+  }
+
+  wrap.style.display = "block";
+
+  if(!_analyzeMap){
+    _analyzeMap = L.map(el, { zoomControl: true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "© OpenStreetMap"
+    }).addTo(_analyzeMap);
+  }
+
+  if(_analyzePolyline){
+    _analyzePolyline.remove();
+    _analyzePolyline = null;
+  }
+
+  _analyzePolyline = L.polyline(pts).addTo(_analyzeMap);
+  _analyzeMap.fitBounds(_analyzePolyline.getBounds(), { padding: [20, 20] });
+
+  // Leaflet behöver ofta en invalidateSize när modal öppnas
+  setTimeout(()=>{ try{ _analyzeMap.invalidateSize(); }catch(_e){} }, 150);
+}
+
+window.processAnalyzeFile = async function(activityId){
+  const msg = document.getElementById("processFitMsg");
+  const setMsg = (t)=>{ if(msg) msg.textContent = t || ""; };
+
+  try{
+    if(!activityId) return;
+    setMsg("Bearbetar FIT…");
+
+    const { data: sessionData } = await sb.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if(!accessToken){
+      setMsg("Du måste vara inloggad.");
+      return;
+    }
+
+    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/process-fit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ activity_id: Number(activityId) })
+    });
+
+    const json = await res.json().catch(()=> ({}));
+    if(!res.ok || !json.ok){
+      setMsg(`Fel: ${json.error || res.statusText || "okänt fel"}`);
+      return;
+    }
+
+    setMsg(`Klart! GPS-punkter: ${json.points ?? "-"}${json.avg_hr ? " • snittpuls " + json.avg_hr : ""}`);
+
+    const series = await fetchActivitySeries(Number(activityId));
+    renderAnalyzeMap(series);
+  } catch(e){
+    setMsg("Fel: " + (e?.message || "okänt"));
+  }
+};
+
+
+/* ── Supabase Auth Gate ──
+   Den här sidan visar inget innan en giltig session finns.
+   Om ingen session: redirect till index.html
+*/
+document.documentElement.classList.add("auth-pending");
+
+async function requireSession(){
+  const { data, error } = await sb.auth.getSession();
+  if(error){
+    console.error(error);
+    location.href = "index.html?err=1";
+    return;
+  }
+  const user = data?.session?.user;
+  window.currentUser = user || null;
+  if(!user){
+    location.href = "index.html";
+    return;
+  }
+  document.documentElement.classList.remove("auth-pending");
+}
+
+await requireSession();
+
+const btnSignOut = document.getElementById("btnSignOut");
+if(btnSignOut){
+  btnSignOut.addEventListener("click", async ()=>{
+    await sb.auth.signOut();
+    location.href = "index.html?logout=1";
+  });
+}
+
+
+const form              = document.getElementById("activity-form");
+const msg               = document.getElementById("msg");
+const reloadBtn         = document.getElementById("reloadBtn");
+const yearSelect        = document.getElementById("yearSelect");
+const countChip         = document.getElementById("countChip");
+const lastChip          = document.getElementById("lastChip");
+const pillYear          = document.getElementById("pillYear");
+const subYear           = document.getElementById("subYear");
+const statTotalSessions = document.getElementById("statTotalSessions");
+const statTotalHours    = document.getElementById("statTotalHours");
+const statRunKm         = document.getElementById("statRunKm");
+const tabDash           = document.getElementById("tabDash");
+const tabLogg           = document.getElementById("tabLogg");
+const tabGolf           = document.getElementById("tabGolf");
+const viewDash          = document.getElementById("viewDash");
+const viewLogg          = document.getElementById("viewLogg");
+const viewGolf          = document.getElementById("viewGolf");
+const activitiesDiv     = document.getElementById("activities");
+
+const monthLabels = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
+function updateRunFields(){
+  const sportVal = document.getElementById("sport")?.value || "";
+  const isRun = sportVal === "Löpning";
+  const tlField = document.getElementById("trainingLoadField");
+  if(tlField) tlField.style.display = isRun ? "" : "none";
+  if(!isRun){ const tl=document.getElementById("training_load"); if(tl) tl.value=""; }
+}
+
+const monthNamesFull = ["Januari","Februari","Mars","April","Maj","Juni","Juli","Augusti","September","Oktober","November","December"];
+let chartRun = null, chartStrength = null, chartRunLoad = null;
+
+Chart.defaults.color = "rgba(123,132,184,0.9)";
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+/* ── Calendar ── */
+const dateDisplay     = document.getElementById("dateDisplay");
+const dateDisplayText = document.getElementById("dateDisplayText");
+const calendarPopup   = document.getElementById("calendarPopup");
+const calDaysEl       = document.getElementById("calDays");
+const calMonthLabel   = document.getElementById("calMonthLabel");
+const calPrev         = document.getElementById("calPrev");
+const calNext         = document.getElementById("calNext");
+const calHour         = document.getElementById("calHour");
+const calMinute       = document.getElementById("calMinute");
+const calConfirm      = document.getElementById("calConfirm");
+const hiddenStart     = document.getElementById("start_time");
+
+let calView     = new Date();
+let calSelected = new Date();
+
+function renderCalendar() {
+  const y = calView.getFullYear(), m = calView.getMonth();
+  calMonthLabel.textContent = `${monthNamesFull[m]} ${y}`;
+  calDaysEl.innerHTML = "";
+  const today    = new Date();
+  const firstDay = new Date(y, m, 1);
+  let offset = firstDay.getDay() - 1;
+  if (offset < 0) offset = 6;
+
+  const prevLast = new Date(y, m, 0).getDate();
+  for (let i = offset - 1; i >= 0; i--) {
+    calDaysEl.appendChild(mkDay(new Date(y, m-1, prevLast-i), "other-month"));
+  }
+
+  const dim = new Date(y, m+1, 0).getDate();
+  for (let d = 1; d <= dim; d++) {
+    const date = new Date(y, m, d);
+    const cls = [];
+    if (date.toDateString() === today.toDateString()) cls.push("today");
+    if (calSelected && date.toDateString() === calSelected.toDateString()) cls.push("selected");
+    calDaysEl.appendChild(mkDay(date, cls.join(" ")));
+  }
+
+  const total = Math.ceil((offset + dim) / 7) * 7;
+  for (let d = 1; d <= total - offset - dim; d++) {
+    calDaysEl.appendChild(mkDay(new Date(y, m+1, d), "other-month"));
+  }
+}
+
+function mkDay(date, cls) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `cal-day ${cls}`.trim();
+  btn.textContent = date.getDate();
+  btn.addEventListener("click", () => {
+    calSelected = date;
+    // Apply immediately (no confirm needed)
+    const iso = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+    hiddenStart.value = `${iso}T12:00:00`;
+    dateDisplayText.textContent = date.toLocaleDateString("sv-SE");
+    dateDisplayText.classList.remove("placeholder");
+    calendarPopup.classList.remove("open");
+    dateDisplay.classList.remove("open");
+    renderCalendar();
+  });
+  return btn;
+}
+
+calPrev.addEventListener("click", () => { calView = new Date(calView.getFullYear(), calView.getMonth()-1, 1); renderCalendar(); });
+calNext.addEventListener("click", () => { calView = new Date(calView.getFullYear(), calView.getMonth()+1, 1); renderCalendar(); });
+
+// Sport dependent fields
+const sportSel = document.getElementById("sport");
+if(sportSel){ sportSel.addEventListener("change", updateRunFields); }
+setTimeout(updateRunFields, 0);
+
+
+dateDisplay.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = calendarPopup.classList.toggle("open");
+  dateDisplay.classList.toggle("open", open);
+  if (open) renderCalendar();
+});
+
+calConfirm.addEventListener("click", () => {
+  if (!calSelected) return;
+  const iso = `${calSelected.getFullYear()}-${String(calSelected.getMonth()+1).padStart(2,"0")}-${String(calSelected.getDate()).padStart(2,"0")}`;
+  hiddenStart.value = `${iso}T12:00:00`;
+  dateDisplayText.textContent = calSelected.toLocaleDateString("sv-SE");
+  dateDisplayText.classList.remove("placeholder");
+  calendarPopup.classList.remove("open");
+  dateDisplay.classList.remove("open");
+});
+
+document.addEventListener("click", (e) => {
+  if (!calendarPopup.contains(e.target) && e.target !== dateDisplay && !dateDisplay.contains(e.target)) {
+    calendarPopup.classList.remove("open");
+    dateDisplay.classList.remove("open");
+  }
+});
+
+// Init default time to now
+calHour.value   = new Date().getHours();
+calMinute.value = String(new Date().getMinutes()).padStart(2, "0");
+
+/* ── Helpers ── */
+function setMessage(t, err=false){ msg.textContent=t||""; msg.style.color=err?"var(--bad)":"var(--good)"; }
+
+function updateSportUI(){
+  const sportEl = document.getElementById("sport");
+  const distField = document.getElementById("distanceField");
+  const distInput = document.getElementById("distance_km");
+  const tlInput = document.getElementById("training_load");
+  const paceHint  = document.getElementById("paceHint");
+  const loadField = document.getElementById("loadFieldRow");
+  const loadInput = document.getElementById("training_load");
+  if(!sportEl || !distField || !distInput) return;
+  const isRun = sportEl.value === "Löpning";
+  distField.style.display = isRun ? "" : "none";
+  distInput.disabled = !isRun;
+  if(!isRun) distInput.value = "";
+  if(paceHint) paceHint.style.display = isRun ? "" : "none";
+  if(loadField) loadField.style.display = isRun ? "" : "none";
+  if(loadInput){ loadInput.disabled = !isRun; if(!isRun) loadInput.value = ""; }
+}
+document.getElementById("sport")?.addEventListener("change", updateSportUI);
+
+// Show JS errors in-app (so you don't have to open DevTools)
+(function(){
+  const show = (msg)=>{
+    const b=document.getElementById("errBanner");
+    if(!b) return;
+    b.style.display="block";
+    b.textContent = "JS-fel: " + msg;
+  };
+  window.addEventListener("error", (e)=>{
+    show(e?.message || "Okänt fel");
+  });
+  window.addEventListener("unhandledrejection", (e)=>{
+    show(e?.reason?.message || String(e?.reason || "Okänd promise-rejection"));
+  });
+})();
+
+function safeText(v){ const s=document.createElement("span"); s.textContent=(v??'').toString(); return s.innerHTML; }
+function formatDistance(m){ if(!m||m<=0)return null; const k=m/1000; return `${k.toFixed(k<10?2:1)} km`; }
+function formatDuration(s){ if(!s||s<=0)return null; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; }
+function calcPace(dur,dist){ if(!dur||!dist||dist<=0)return null; const s=dur/(dist/1000); if(!isFinite(s))return null; return `${Math.floor(s/60)}:${Math.round(s%60).toString().padStart(2,"0")} min/km`; }
+function toHours(s){ return(!s||s<=0)?0:s/3600; }
+function yearsFromActivities(list){ const ys=new Set(); for(const a of list){ const d=new Date(a.start_time); if(!isNaN(d.getTime()))ys.add(d.getFullYear()); } return Array.from(ys).sort((a,b)=>b-a); }
+/* ── PR & Race helpers ── */
+const prForm = document.getElementById("prForm");
+const prList = document.getElementById("prList");
+const prMsg  = document.getElementById("prMsg");
+const prSubmitBtn = document.getElementById("prSubmitBtn");
+
+const raceForm = document.getElementById("raceForm");
+const raceList = document.getElementById("raceList");
+
+const raceYearFilter = document.getElementById("raceYearFilter");
+const btnClearRaceFilter = document.getElementById("btnClearRaceFilter");
+
+const logYearFilter = document.getElementById("logYearFilter");
+const logMonthFilter = document.getElementById("logMonthFilter");
+const btnClearLogFilters = document.getElementById("btnClearLogFilters");
+
+let __allActivitiesCache = [];
+let __allRacesCache = [];
+
+function populateLogFilterOptions(list){
+  const items = list || [];
+  const years = Array.from(new Set(items.map(a=>yearFromISO(a.start_time)).filter(Boolean))).sort((a,b)=>b-a);
+  if(logYearFilter){
+    const cur = logYearFilter.value || "all";
+    logYearFilter.innerHTML = `<option value="all">Alla år</option>` + years.map(y=>`<option value="${y}">${y}</option>`).join("");
+    logYearFilter.value = years.includes(Number(cur)) ? cur : "all";
+  }
+  if(logMonthFilter){
+    const curm = logMonthFilter.value || "all";
+    const months = Array.from(new Set(items.map(a=>monthFromISO(a.start_time)).filter(Boolean))).sort((a,b)=>a-b);
+    const monthNames = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
+    logMonthFilter.innerHTML = `<option value="all">Alla månader</option>` + months.map(m=>`<option value="${m}">${monthNames[m-1]}</option>`).join("");
+    logMonthFilter.value = months.includes(Number(curm)) ? curm : "all";
+  }
+}
+
+function parseAnyDate(v){
+  if(!v) return null;
+  const d = new Date(v);
+  if(!Number.isNaN(d.getTime())) return d;
+  const s = String(v);
+  const m = s.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m){
+    const yy = Number(m[1]), mm = Number(m[2]) - 1, dd = Number(m[3]);
+    const ddObj = new Date(yy, mm, dd);
+    if(!Number.isNaN(ddObj.getTime())) return ddObj;
+  }
+  return null;
+}
+function yearFromISO(iso){
+  const d = parseAnyDate(iso);
+  return d ? d.getFullYear() : null;
+}
+function monthFromISO(iso){
+  const d = parseAnyDate(iso);
+  return d ? (d.getMonth()+1) : null;
+}
+function populateYearSelect(selectEl, years){
+  if(!selectEl) return;
+  const current = selectEl.value || "all";
+  const uniq = Array.from(new Set(years.filter(Boolean))).sort((a,b)=>b-a);
+  selectEl.innerHTML = ['<option value="all">Alla år</option>'].concat(uniq.map(y=>`<option value="${y}">${y}</option>`)).join("");
+  // restore if still exists
+  if(uniq.includes(Number(current))) selectEl.value = current;
+  else selectEl.value = "all";
+}
+
+function applyLogFilters(list){
+  const y = logYearFilter?.value || "all";
+  const m = logMonthFilter?.value || "all";
+  return (list||[]).filter(a=>{
+    const yy = yearFromISO(a.start_time);
+    const mm = monthFromISO(a.start_time);
+    if(y!=="all" && yy!==Number(y)) return false;
+    if(m!=="all" && mm!==Number(m)) return false;
+    return true;
+  });
+}
+
+function applyRaceFilters(list){
+  const y = raceYearFilter?.value || "all";
+  return (list||[]).filter(r=>{
+    const yy = yearFromISO(r.date || r.created_at);
+    if(y!=="all" && yy!==Number(y)) return false;
+    return true;
+  });
+}
+
+function rememberFilters(){
+  try{
+    if(logYearFilter) localStorage.setItem("tf_log_year", logYearFilter.value);
+    if(logMonthFilter) localStorage.setItem("tf_log_month", logMonthFilter.value);
+    if(raceYearFilter) localStorage.setItem("tf_race_year", raceYearFilter.value);
+  }catch(_e){}
+}
+function restoreFilters(){
+  try{
+    const ly = localStorage.getItem("tf_log_year");
+    const lm = localStorage.getItem("tf_log_month");
+    const ry = localStorage.getItem("tf_race_year");
+    if(logMonthFilter && lm && Array.from(logMonthFilter.options).some(o=>o.value===lm)) logMonthFilter.value = lm;
+    if(raceYearFilter && ry) raceYearFilter.value = ry; // year options will be validated after populate
+    if(logYearFilter && ly) logYearFilter.value = ly;   // validated after populate
+  }catch(_e){}
+}
+function clearFilters(){
+  try{
+    localStorage.removeItem("tf_log_year");
+    localStorage.removeItem("tf_log_month");
+    localStorage.removeItem("tf_race_year");
+  }catch(_e){}
+}
+
+const raceMsg  = document.getElementById("raceMsg");
+const raceSubmitBtn = document.getElementById("raceSubmitBtn");
+
+let prTrendChart = null;
+const lockPill = document.getElementById("lockPill");
+const prTrendSelect = document.getElementById("prTrendSelect");
+const chartPRTrendCanvas = document.getElementById("chartPRTrend");
+
+/* ── Simple edit lock (UI-level) ──
+   NOTE: This is NOT real security. For real security, use Supabase Auth + per-user RLS.
+*/
+const EDIT_PIN = "1234"; // Ändra till din egen kod
+let editUnlocked = false;
+
+function applyEditLock(){
+  const prCard = lockPill ? lockPill.closest(".records-card") : null;
+  const raceCard = document.getElementById("raceForm") ? document.getElementById("raceForm").closest(".records-card") : null;
+  const locked = !editUnlocked;
+  if(prCard) prCard.classList.toggle("locked", locked);
+  if(raceCard) raceCard.classList.toggle("locked", locked);
+  if(lockPill){
+    lockPill.textContent = locked ? "🔒 Låst" : "🔓 Upplåst";
+    lockPill.title = locked ? "Klicka för att låsa upp redigering" : "Klicka för att låsa";
+    lockPill.classList.toggle("chip-accent", !locked);
+  }
+  // Disable submit buttons when locked (still allow typing)
+  if(prSubmitBtn) prSubmitBtn.disabled = locked;
+  if(raceSubmitBtn) raceSubmitBtn.disabled = locked;
+}
+
+if(lockPill){
+  lockPill.addEventListener("click", ()=>{
+    if(editUnlocked){
+      editUnlocked = false;
+      applyEditLock();
+      setMiniMessage(prMsg, "Låst 🔒");
+      setMiniMessage(raceMsg, "Låst 🔒");
+      return;
+    }
+    const pin = prompt("Ange PIN för att låsa upp redigering:");
+    if(pin === EDIT_PIN){
+      editUnlocked = true;
+      applyEditLock();
+      setMiniMessage(prMsg, "Upplåst ✓");
+      setMiniMessage(raceMsg, "Upplåst ✓");
+    }else if(pin != null){
+      setMiniMessage(prMsg, "Fel PIN.", true);
+    }
+  });
+}
+
+function distIcon(type){
+  const t = (type||"").toLowerCase();
+  if(t.includes("5")) return "5K";
+  if(t.includes("10")) return "10K";
+  if(t.includes("halv")) return "HM";
+  if(t.includes("mara")) return "M";
+  if(t.includes("ultra")) return "ULTRA";
+  return "PR";
+}
+
+function bestByType(prs){
+  const map = new Map();
+  for(const r of prs){
+    const key = r.type || "";
+    if(!map.has(key) || (r.time_s != null && r.time_s < map.get(key).time_s)){
+      map.set(key, r);
+    }
+  }
+  return map;
+}
+
+function buildPRTrend(prs, type){
+  const filtered = prs.filter(r => (r.type||"") === type && r.time_s != null);
+  // Prefer date ordering; fallback to created_at
+  filtered.sort((a,b)=>{
+    const da = a.date ? new Date(a.date) : new Date(a.created_at || 0);
+    const db = b.date ? new Date(b.date) : new Date(b.created_at || 0);
+    return da - db;
+  });
+  const labels = filtered.map(r => r.date ? r.date : (r.created_at ? new Date(r.created_at).toISOString().slice(0,10) : ""));
+  const data = filtered.map(r => Math.round(r.time_s/1)/1);
+  return { labels, data };
+}
+
+function renderPRTrend(prs){
+  if(!chartPRTrendCanvas || !window.Chart) return;
+  const type = prTrendSelect ? prTrendSelect.value : "5 km";
+  const t = buildPRTrend(prs, type);
+  if(prTrendChart) prTrendChart.destroy();
+
+  // If not enough points, show empty-ish chart
+  prTrendChart = new Chart(chartPRTrendCanvas,{
+    type:"line",
+    data:{
+      labels: t.labels.length ? t.labels : ["—"],
+      datasets:[{
+        label:`Tid (${type})`,
+        data: t.data.length ? t.data : [null],
+        borderColor:"rgba(167,139,250,0.85)",
+        backgroundColor:"rgba(167,139,250,0.10)",
+        pointBackgroundColor:"rgba(167,139,250,0.90)",
+        pointBorderColor:"rgba(13,15,28,1)",
+        pointBorderWidth:2,
+        pointRadius:3,
+        tension:0.35,
+        fill:true
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{
+          backgroundColor:"rgba(7,8,15,0.96)",
+          borderColor:"rgba(167,139,250,0.20)",
+          borderWidth:1,
+          titleColor:"rgba(232,234,248,0.95)",
+          bodyColor:"rgba(123,132,184,0.9)",
+          padding:12,
+          cornerRadius:12,
+          callbacks:{
+            label:(ctx)=>` ${formatHms(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales:{
+        x:{ grid:{color:"rgba(99,102,241,0.06)"}, border:{display:false},
+            ticks:{color:"rgba(123,132,184,0.65)", maxTicksLimit:6} },
+        y:{ grid:{color:"rgba(99,102,241,0.07)"}, border:{display:false},
+            ticks:{color:"rgba(123,132,184,0.65)", callback:(v)=>formatHms(v)} }
+      }
+    }
+  });
+}
+
+if(prTrendSelect){
+  prTrendSelect.addEventListener("change", async ()=>{
+    try{
+      const prs = await fetchPRs();
+      renderPRTrend(prs);
+    }catch(e){}
+  });
+}
+
+
+function setMiniMessage(el, t, err=false){
+  if(!el) return;
+  el.textContent = t || "";
+  el.style.color = err ? "var(--bad)" : "var(--good)";
+}
+
+function parseHmsToSeconds(str){
+  if(!str) return null;
+  const s = String(str).trim();
+  // Accept mm:ss or hh:mm:ss
+  const parts = s.split(":").map(p=>p.trim()).filter(Boolean);
+  if(parts.length<2 || parts.length>3) return null;
+  const nums = parts.map(p=>Number(p));
+  if(nums.some(n=>!isFinite(n) || n<0)) return null;
+  let h=0,m=0,sec=0;
+  if(parts.length===2){ m=nums[0]; sec=nums[1]; }
+  else { h=nums[0]; m=nums[1]; sec=nums[2]; }
+  if(m>59 || sec>59) return null;
+  return Math.floor(h)*3600 + Math.floor(m)*60 + Math.floor(sec);
+}
+
+function formatHms(seconds){
+  if(seconds==null || !isFinite(seconds) || seconds<0) return "—";
+  const s=Math.floor(seconds);
+  const h=Math.floor(s/3600);
+  const m=Math.floor((s%3600)/60);
+  const sec=s%60;
+  const pad=n=>String(n).padStart(2,"0");
+  return h>0 ? `${pad(h)}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
+
+/* ── Supabase: PR ──
+   Table suggestion:
+   personal_records: id (uuid), type (text), time_s (int), date (date), event (text), notes (text), created_at (timestamptz default now())
+*/
+async function fetchPRs(){
+  if(!window.currentUser) return [];
+  const { data, error } = await sb.from("personal_records")
+    .select("id,type,time_s,date,event,notes,created_at")
+    .eq("user_id", window.currentUser.id)
+    .order("time_s",{ascending:true})
+    .limit(50);
+  if(error) throw error;
+  return data || [];
+}
+
+function renderPRs(list){
+  if(!prList) return;
+  if(!list.length){
+    prList.innerHTML = `
+      <div class="empty-state" style="margin:0; padding:18px 14px;">
+        <div class="empty-state-icon">✨</div>
+        <div class="empty-state-title">Inga PR ännu</div>
+        <div class="empty-state-sub">Lägg in din bästa tid så dyker den upp här.</div>
+      </div>`;
+    return;
+  }
+  prList.innerHTML = "";
+  const bestMap = (typeof bestByType === "function") ? bestByType(list) : new Map();
+  for(const r of list){
+    const metaParts = [];
+    if(r.date) metaParts.push(`<span class="pill soft">📅 ${safeText(r.date)}</span>`);
+    if(r.event) metaParts.push(`<span class="pill soft">🏁 ${safeText(r.event)}</span>`);
+    const notes = r.notes ? `<div class="note-mini">${safeText(r.notes)}</div>` : "";
+    const el = document.createElement("div");
+    const isBest = bestMap.get(r.type || "")?.id === r.id;
+    el.className = "mini-item" + (isBest ? " best" : "");
+    el.innerHTML = `
+      <div class="mini-main">
+        <div class="mini-top">
+          <div class="mini-name">🏃 <span class="pill" style="padding:3px 9px;">${safeText(distIcon(r.type))}</span> ${safeText(r.type || "")} ${isBest ? '<span class="badge-best">🏆 Bästa</span>' : ''}</div>
+          <div class="mini-time">${formatHms(r.time_s)}</div>
+        </div>
+        <div class="mini-meta">${metaParts.join("")}</div>
+        ${notes}
+      </div>
+      <div class="mini-actions">
+        <button class="btn-ghost" type="button" onclick="editPR('${r.id}')">✏️</button>
+        <button class="btn-ghost danger" type="button" onclick="deletePR('${r.id}')">🗑</button>
+      </div>`;
+    prList.appendChild(el);
+  }
+}
+
+async function upsertPR(payload, id=null){
+  if(id){
+    const { error } = await sb.from("personal_records").update(payload).eq("id", id).eq("user_id", window.currentUser.id);
+    if(error) throw error;
+  } else {
+    const { error } = await sb.from("personal_records").insert({ ...payload, user_id: window.currentUser.id });
+    if(error) throw error;
+  }
+}
+
+window.deletePR = async function(id){
+  if(!editUnlocked){ setMiniMessage(prMsg, "Låst 🔒 (klicka låset för att låsa upp)", true); return; }
+  if(!confirm("Radera PR?")) return;
+  try{
+    const { error } = await sb.from("personal_records").delete().eq("id", id).eq("user_id", window.currentUser.id);
+    if(error) throw error;
+    setMiniMessage(prMsg, "PR raderat ✓");
+    await loadPRs();
+  }catch(e){ setMiniMessage(prMsg, e?.message||"Kunde inte radera", true); }
+}
+
+window.editPR = async function(id){
+  if(!editUnlocked){ setMiniMessage(prMsg, "Låst 🔒 (klicka låset för att låsa upp)", true); return; }
+  try{
+    const { data, error } = await sb.from("personal_records")
+      .select("id,type,time_s,date,event,notes").eq("id", id).eq("user_id", window.currentUser.id).single();
+    if(error) throw error;
+    prForm.dataset.editId = data.id;
+    document.getElementById("prType").value = data.type || "5 km";
+    document.getElementById("prTime").value = formatHms(data.time_s);
+    document.getElementById("prDate").value = data.date || "";
+    document.getElementById("prEvent").value = data.event || "";
+    document.getElementById("prNotes").value = data.notes || "";
+    prSubmitBtn.textContent = "Uppdatera PR";
+    setMiniMessage(prMsg, "Redigerar PR…");
+  }catch(e){ setMiniMessage(prMsg, e?.message||"Kunde inte hämta", true); }
+}
+
+async function loadPRs(){
+  try{
+    const prs = await fetchPRs();
+    renderPRs(prs);
+    if(prTrendSelect) prTrendSelect.value = prTrendSelect.value || "5 km";
+    renderPRTrend(prs);
+  }catch(e){
+    // Graceful error message + hint about table
+    if(prList){
+      prList.innerHTML = `
+        <div class="empty-state" style="margin:0; padding:18px 14px;">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-title">PR saknar tabell</div>
+          <div class="empty-state-sub">${safeText(e?.message||"Skapa tabellen 'personal_records' i Supabase för att spara PR.")}</div>
+        </div>`;
+    }
+  }
+}
+
+if(prForm){
+  prForm.addEventListener("submit", async (e)=>{
+    if(!editUnlocked){ setMiniMessage(prMsg, "Låst 🔒 (klicka låset för att låsa upp)", true); return; }
+    e.preventDefault();
+    setMiniMessage(prMsg,"");
+    const type = document.getElementById("prType").value;
+    const time_s = parseHmsToSeconds(document.getElementById("prTime").value);
+    if(time_s==null){ setMiniMessage(prMsg,"Ange tid som mm:ss eller hh:mm:ss.", true); return; }
+    const date = document.getElementById("prDate").value || null;
+    const event = document.getElementById("prEvent").value.trim() || null;
+    const notes = document.getElementById("prNotes").value.trim() || null;
+
+    const payload = { type, time_s, date, event, notes };
+    const editId = prForm.dataset.editId || null;
+
+    try{
+      await upsertPR(payload, editId);
+      prForm.reset();
+      delete prForm.dataset.editId;
+      prSubmitBtn.textContent = "Spara PR";
+      setMiniMessage(prMsg, editId ? "PR uppdaterat ✓" : "PR sparat ✓");
+      await loadPRs();
+    }catch(err){
+      setMiniMessage(prMsg, err?.message||"Kunde inte spara", true);
+    }
+  });
+}
+
+/* ── Supabase: Race results ──
+   Table suggestion:
+   race_results: id (uuid), name (text), distance (text), time_s (int), date (date), location (text), notes (text), created_at (timestamptz default now())
+*/
+async function fetchRaces(){
+  if(!window.currentUser) return [];
+  const { data, error } = await sb.from("race_results")
+    .select("id,name,distance,time_s,date,location,notes,created_at")
+    .eq("user_id", window.currentUser.id)
+    .order("date",{ascending:false})
+    .limit(60);
+  if(error) throw error;
+  return data || [];
+}
+
+function renderRaces(list){
+  if(!raceList) return;
+  if(!list.length){
+    raceList.innerHTML = `
+      <div class="empty-state" style="margin:0; padding:18px 14px;">
+        <div class="empty-state-icon">🗓️</div>
+        <div class="empty-state-title">Inga tävlingar ännu</div>
+        <div class="empty-state-sub">När du lägger till ett resultat visas det här.</div>
+      </div>`;
+    return;
+  }
+  raceList.innerHTML = "";
+  for(const r of list){
+    const metaParts = [];
+    if(r.date) metaParts.push(`<span class="pill soft">📅 ${safeText(r.date)}</span>`);
+    if(r.location) metaParts.push(`<span class="pill soft">📍 ${safeText(r.location)}</span>`);
+    metaParts.push(`<span class="pill">📏 ${safeText(r.distance||"")}</span>`);
+
+    const notes = r.notes ? `<div class="note-mini">${safeText(r.notes)}</div>` : "";
+
+    const el = document.createElement("div");
+    el.className="mini-item";
+    el.innerHTML = `
+      <div class="mini-main">
+        <div class="mini-top">
+          <div class="mini-name">${safeText(r.name||"")}</div>
+          <div class="mini-time">${formatHms(r.time_s)}</div>
+        </div>
+        <div class="mini-meta">${metaParts.join("")}</div>
+        ${notes}
+      </div>
+      <div class="mini-actions">
+        <button class="btn-ghost" type="button" onclick="editRace('${r.id}')">✏️</button>
+        <button class="btn-ghost danger" type="button" onclick="deleteRace('${r.id}')">🗑</button>
+      </div>`;
+    raceList.appendChild(el);
+  }
+}
+
+async function upsertRace(payload, id=null){
+  if(id){
+    const { error } = await sb.from("race_results").update(payload).eq("id", id).eq("user_id", window.currentUser.id);
+    if(error) throw error;
+  } else {
+    const { error } = await sb.from("race_results").insert({ ...payload, user_id: window.currentUser.id });
+    if(error) throw error;
+  }
+}
+
+window.deleteRace = async function(id){
+  if(!editUnlocked){ setMiniMessage(raceMsg, "Låst 🔒 (klicka låset för att låsa upp)", true); return; }
+  if(!confirm("Radera resultat?")) return;
+  try{
+    const { error } = await sb.from("race_results").delete().eq("id", id).eq("user_id", window.currentUser.id);
+    if(error) throw error;
+    setMiniMessage(raceMsg, "Resultat raderat ✓");
+    await loadRaces();
+  }catch(e){ setMiniMessage(raceMsg, e?.message||"Kunde inte radera", true); }
+}
+
+window.editRace = async function(id){
+  if(!editUnlocked){ setMiniMessage(raceMsg, "Låst 🔒 (klicka låset för att låsa upp)", true); return; }
+  try{
+    const { data, error } = await sb.from("race_results")
+      .select("id,name,distance,time_s,date,location,notes").eq("id", id).eq("user_id", window.currentUser.id).single();
+    if(error) throw error;
+    raceForm.dataset.editId = data.id;
+    document.getElementById("raceName").value = data.name || "";
+    document.getElementById("raceDistance").value = data.distance || "";
+    document.getElementById("raceTime").value = formatHms(data.time_s);
+    document.getElementById("raceDate").value = data.date || "";
+    document.getElementById("raceLocation").value = data.location || "";
+    document.getElementById("raceNotes").value = data.notes || "";
+    raceSubmitBtn.textContent = "Uppdatera resultat";
+    setMiniMessage(raceMsg, "Redigerar resultat…");
+  }catch(e){ setMiniMessage(raceMsg, e?.message||"Kunde inte hämta", true); }
+}
+
+async function loadRaces(){
+  try{
+    const races = await fetchRaces();
+    __allRacesCache = races;
+    try{ populateYearSelect(raceYearFilter, races.map(r=>yearFromISO(r.date||r.created_at)).filter(Boolean));
+      const ry = localStorage.getItem('tf_race_year');
+      if(raceYearFilter && ry && Array.from(raceYearFilter.options).some(o=>o.value===ry)) raceYearFilter.value = ry;
+    }catch(_e){}
+    renderRaces(applyRaceFilters(races));
+  }catch(e){
+    if(raceList){
+      raceList.innerHTML = `
+        <div class="empty-state" style="margin:0; padding:18px 14px;">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-title">Tävlingar kan inte laddas</div>
+          <div class="empty-state-sub">${safeText(e?.message||"Skapa tabellen 'race_results' i Supabase för att spara tävlingar.")}</div>
+        </div>`;
+    }
+  }
+}
+
+if(raceForm){
+  raceForm.addEventListener("submit", async (e)=>{
+    if(!editUnlocked){ setMiniMessage(raceMsg, "Låst 🔒 (klicka låset för att låsa upp)", true); return; }
+    e.preventDefault();
+    setMiniMessage(raceMsg,"");
+    const name = document.getElementById("raceName").value.trim();
+    const distance = document.getElementById("raceDistance").value.trim();
+    const time_s = parseHmsToSeconds(document.getElementById("raceTime").value);
+    if(!name || !distance){ setMiniMessage(raceMsg,"Ange namn och distans.", true); return; }
+    if(time_s==null){ setMiniMessage(raceMsg,"Ange tid som mm:ss eller hh:mm:ss.", true); return; }
+
+    const date = document.getElementById("raceDate").value || null;
+    const location = document.getElementById("raceLocation").value.trim() || null;
+    const notes = document.getElementById("raceNotes").value.trim() || null;
+
+    const payload = { name, distance, time_s, date, location, notes };
+    const editId = raceForm.dataset.editId || null;
+
+    try{
+      await upsertRace(payload, editId);
+      raceForm.reset();
+      delete raceForm.dataset.editId;
+      raceSubmitBtn.textContent = "Spara resultat";
+      setMiniMessage(raceMsg, editId ? "Resultat uppdaterat ✓" : "Resultat sparat ✓");
+      await loadRaces();
+    }catch(err){
+      setMiniMessage(raceMsg, err?.message||"Kunde inte spara", true);
+    }
+  });
+}
+
+
+
+
+function ensureYearOptions(all){
+  const ys=yearsFromActivities(all), cur=new Date().getFullYear();
+  if(!ys.includes(cur))ys.unshift(cur);
+  const sel=yearSelect.value; yearSelect.innerHTML="";
+  for(const y of ys){ const o=document.createElement("option"); o.value=String(y); o.textContent=String(y); yearSelect.appendChild(o); }
+  yearSelect.value=(sel&&ys.includes(Number(sel)))?sel:String(cur);
+  pillYear.textContent=`År: ${yearSelect.value}`;
+  subYear.textContent=`Valt år: ${yearSelect.value}`;
+}
+function setSummary(list){
+  countChip.textContent=`${list.length} pass`;
+  if(list.length){ const l=new Date(list[0].start_time); lastChip.textContent=`Senast: ${l.toLocaleDateString()} ${l.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`; }
+  else lastChip.textContent="Senast: —";
+}
+function buildYearBuckets(list,year){
+  const init=()=>({counts:Array(12).fill(0),hours:Array(12).fill(0),runKm:Array(12).fill(0)});
+  const out={"Löpning":init(),"Styrketräning":init()};
+  for(const a of list){
+    const d=new Date(a.start_time); if(isNaN(d.getTime())||d.getFullYear()!==year)continue;
+    const mo=d.getMonth(), sp=a.sport||"Okänt"; if(!out[sp])continue;
+    out[sp].counts[mo]+=1; out[sp].hours[mo]+=toHours(a.duration_s);
+    if(sp==="Löpning"&&a.distance_m) out[sp].runKm[mo]+=(a.distance_m/10000); // mil
+  }
+  return out;
+}
+
+
+
+// ── Training Load / week (running) ──
+function isoWeekKey(d){
+  // returns {year, week} using ISO week date
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return { year: date.getUTCFullYear(), week: weekNo };
+}
+
+function buildWeeklyLoad(all, year){
+  const sums = new Map(); // week -> sum
+  for(const a of all){
+    if((a.sport||"")!=="Löpning") continue;
+    if(a.training_load==null) continue;
+    const d = new Date(a.start_time);
+    if(d.getFullYear()!==year) continue;
+    const wk = isoWeekKey(d).week;
+    sums.set(wk, (sums.get(wk)||0) + Number(a.training_load));
+  }
+  const weeks = Array.from(sums.keys()).sort((a,b)=>a-b);
+  const labels = weeks.length ? weeks.map(w=>`V${w}`) : ["—"];
+  const data = weeks.length ? weeks.map(w=>Math.round(sums.get(w))) : [0];
+  return {labels, data};
+}
+
+function makeWeeklyLoadChart(canvasId, wl, prev){
+  const ctx=document.getElementById(canvasId);
+  if(!ctx) return prev;
+  if(prev) prev.destroy();
+  const mx=Math.max(...wl.data,1);
+  return new Chart(ctx,{
+    type:"bar",
+    data:{ labels: wl.labels, datasets:[{
+      label:"Training Load",
+      data: wl.data,
+      backgroundColor: wl.data.map(v=>`rgba(167,139,250,${0.25+0.75*(v/mx)})`),
+      borderColor:"transparent",
+      borderWidth:0,
+      borderRadius:7,
+      borderSkipped:false
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:(c)=>`TL ${c.parsed.y}` } } },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ maxRotation:0, autoSkip:true } },
+        y:{ grid:{ color:"rgba(255,255,255,0.08)" }, ticks:{ callback:(v)=>v } }
+      }
+    }
+  });
+}
+
+function makeHoursBarChart(canvasId, hours, pal, prev){
+  const ctx=document.getElementById(canvasId);
+  if(prev) prev.destroy();
+  const mx=Math.max(...hours,1);
+  return new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:monthLabels,
+      datasets:[{
+        label:"Tid (h)",
+        data:hours.map(v=>Math.round(v*10)/10),
+        backgroundColor:hours.map(v=>pal.bar(0.25+0.75*(v/mx))),
+        borderColor:"transparent",
+        borderWidth:0,
+        borderRadius:7,
+        borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:"index", intersect:false},
+      plugins:{
+        legend:{ labels:{ color:"rgba(123,132,184,0.9)", font:{size:11,weight:'600'}, usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16 } },
+        tooltip:{ backgroundColor:"rgba(7,8,15,0.96)", borderColor:"rgba(99,102,241,0.18)", borderWidth:1, titleColor:"rgba(232,234,248,0.95)", bodyColor:"rgba(123,132,184,0.9)", padding:13, cornerRadius:12, displayColors:true, boxWidth:8, boxHeight:8 }
+      },
+      scales:{
+        x:{ grid:{color:"rgba(99,102,241,0.06)", drawTicks:false}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)", font:{size:11,weight:'600'}, padding:6} },
+        y:{ beginAtZero:true, grid:{color:"rgba(99,102,241,0.07)", drawTicks:false}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)", font:{size:10}, padding:8, maxTicksLimit:5} }
+      }
+    }
+  });
+}
+
+function makeChart(canvasId, counts, hours, pal, prev){
+  const ctx=document.getElementById(canvasId);
+  if(prev) prev.destroy();
+  const mx=Math.max(...counts,1);
+  return new Chart(ctx,{
+    type:"bar",
+    data:{ labels:monthLabels, datasets:[
+      { label:"Sträcka (mil)", data:counts.map(v=>Math.round(v*10)/10), yAxisID:"yCount",
+        backgroundColor:"rgba(255,159,64,0.92)",
+        borderColor:"rgba(255,159,64,0.95)", borderWidth:1, borderRadius:7, borderSkipped:false, order:2 },
+      { label:"Tid (h)", data:hours.map(v=>Math.round(v*10)/10), yAxisID:"yHours", type:"line",
+        borderColor:"rgba(0,255,200,0.45)", borderWidth:2, backgroundColor:"rgba(0,255,200,0.06)",
+        pointBackgroundColor:"rgba(0,255,200,0.55)", pointBorderColor:"rgba(13,15,28,1)", pointBorderWidth:2.5,
+        pointRadius:3, pointHoverRadius:5, tension:0.4, fill:true, order:1 }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:"index", intersect:false},
+      plugins:{
+        legend:{ labels:{ color:"rgba(123,132,184,0.9)", font:{size:11,weight:'600'}, usePointStyle:true, pointStyle:'circle', boxWidth:8, boxHeight:8, padding:16 } },
+        tooltip:{ backgroundColor:"rgba(7,8,15,0.96)", borderColor:"rgba(99,102,241,0.18)", borderWidth:1, titleColor:"rgba(232,234,248,0.95)", bodyColor:"rgba(123,132,184,0.9)", padding:13, cornerRadius:12, displayColors:true, boxWidth:8, boxHeight:8 }
+      },
+      scales:{
+        x:{ grid:{color:"rgba(99,102,241,0.06)", drawTicks:false}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)", font:{size:11,weight:'600'}, padding:6} },
+        yCount:{ position:"left", beginAtZero:true, grid:{color:"rgba(99,102,241,0.07)", drawTicks:false}, border:{display:false}, ticks:{precision:0, color:"rgba(123,132,184,0.65)", font:{size:10}, padding:8, maxTicksLimit:5} },
+        yHours:{ position:"right", beginAtZero:true, grid:{drawOnChartArea:false, drawTicks:false}, border:{display:false}, ticks:{color:"rgba(0,255,200,0.35)", font:{size:10}, padding:8, maxTicksLimit:5} }
+      }
+    }
+  });
+}
+
+async function fetchAllActivities(){
+  const{data,error}=await sb.from("activities").select("id,start_time,sport,name,duration_s,distance_m,training_load,notes,source").order("start_time",{ascending:false}).limit(5000);
+  if(error)throw error; return data||[];
+}
+
+function renderLatestList(list){
+  const latest=list.slice(0,60);
+
+  if(!latest.length){
+    activitiesDiv.className="";
+    activitiesDiv.innerHTML=`
+      <div class="empty-state">
+        <div class="empty-state-icon">🏋️</div>
+        <div class="empty-state-title">Inga pass ännu</div>
+        <div class="empty-state-sub">Lägg till ditt första pass via formuläret ovan.</div>
+      </div>`;
+    return;
+  }
+
+  activitiesDiv.className="activities-list";
+  activitiesDiv.innerHTML="";
+
+  for(const a of latest){
+    const div=document.createElement("div");
+    div.className="activity-item";
+
+    const when=new Date(a.start_time);
+    const wt=`${when.toLocaleDateString()} ${when.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
+
+    const dist=formatDistance(a.distance_m);
+    const dur=formatDuration(a.duration_s);
+    const pace=calcPace(a.duration_s,a.distance_m);
+    const spt=(a.sport||"");
+    const isRun=(spt==="Löpning"||spt==="running"||spt.toLowerCase()==="löpning"||spt.toLowerCase()==="run");
+
+    div.innerHTML=`
+      <div class="activity-icon ${isRun?'run':'strength'}">
+        ${isRun?'🏃':'💪'}
+      </div>
+
+      <div class="activity-body">
+        <div class="activity-name">${safeText(a.name||a.sport)}</div>
+        <div class="activity-when">${wt} · ${safeText(a.sport)}</div>
+
+        <div class="activity-tags">
+          ${dist?`<span class="tag">📏 ${dist}</span>`:''}
+          ${dur?`<span class="tag">⏱ ${dur}</span>`:''}
+          ${pace?`<span class="tag">⚡ ${pace}</span>`:''}
+          ${(isRun && a.training_load!=null)?`<span class="tag">📈 TL ${a.training_load}</span>`:''}
+          <span class="tag" style="opacity:.5">🗂 ${safeText(a.source||"manual")}</span>
+        </div>
+
+        ${a.notes?`<div class="activity-notes">${safeText(a.notes)}</div>`:''}
+
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;"><button class="btn-ghost" type="button" onclick="openAnalyze('${a.id}')">📊 Analysera</button><button class="btn-ghost" type="button" style="border-color:var(--bad); color:var(--bad);" onclick="deleteActivity('${a.id}')">🗑 Radera</button></div>
+      </div>
+
+      <div class="activity-id">${safeText(a.id)}</div>
+    `;
+
+    activitiesDiv.appendChild(div);
+  }
+}
+
+window.deleteActivity = async function(id){
+  if(!confirm("Är du säker på att du vill radera detta pass?")) return;
+
+  try{
+    if(!window.currentUser){ setMessage("Logga in.", true); return; }
+    const { error } = await sb.from("activities").delete().eq("id", id).eq("user_id", window.currentUser.id);
+    if(error) throw error;
+
+    setMessage("Pass raderat ✓");
+    applyEditLock();
+    await refresh();
+  }catch(e){
+    setMessage(e?.message || "Kunde inte radera", true);
+  }
+}
+
+/* ── Golf ── */
+let chartGolfTrend=null;
+let chartGolfDist=null;
+let golfCache=[];
+
+const gFilterHoles = document.getElementById("gFilterHoles");
+const gStatHint = document.getElementById("gStatHint");
+
+function setGolfMsg(t, err=false){
+  const el=document.getElementById("gMsg"); if(!el) return;
+  el.textContent=t||""; el.style.color = err ? "var(--bad)" : "var(--good)";
+}
+
+async function fetchGolf(){
+  if(!window.currentUser) return [];
+  const { data, error } = await sb.from("golf_rounds")
+    .select("*")
+    .eq("user_id", window.currentUser.id)
+    .order("date", { ascending: false })
+    .limit(60);
+  if(error) throw error;
+  return data || [];
+}
+
+function renderGolf(list){
+  const root=document.getElementById("golfList");
+  if(!root) return;
+  if(!list.length){
+    root.innerHTML = `
+      <div class="empty-state" style="margin:0; padding:18px 14px;">
+        <div class="empty-state-icon">⛳</div>
+        <div class="empty-state-title">Inga rundor ännu</div>
+        <div class="empty-state-sub">Lägg till din första runda till vänster.</div>
+      </div>`;
+    return;
+  }
+  root.innerHTML="";
+  for(const r of list){
+    const pills = [
+      r.holes ? `<span class="pill">🕳️ ${safeText(r.holes)} hål</span>` : "",
+      (r.points!=null && r.points!=="") ? `<span class="pill soft">⭐ ${safeText(r.points)} p</span>` : "",
+      (r.weather) ? `<span class="pill soft">☁️ ${safeText(r.weather)}</span>` : ""
+    ].join("");
+
+    const counts = [
+      (r.double_bogey!=null)?`DB ${r.double_bogey}`:"",
+      (r.bogey!=null)?`B ${r.bogey}`:"",
+      (r.par!=null)?`P ${r.par}`:"",
+      (r.birdie!=null)?`Bi ${r.birdie}`:"",
+      (r.eagle!=null)?`E ${r.eagle}`:""
+    ].filter(Boolean).join(" · ");
+
+    const el=document.createElement("div");
+    el.className="mini-item";
+    el.innerHTML = `
+      <div class="mini-main">
+        <div class="mini-top">
+          <div class="mini-name">${safeText(r.course || "Bana")} <span class="pill soft">📅 ${safeText(r.date || "")}</span></div>
+          <div class="mini-time">${safeText(r.strokes)} slag</div>
+        </div>
+        <div class="mini-meta">${pills}${counts?`<span class="pill soft">📊 ${safeText(counts)}</span>`:""}</div>
+        ${r.notes?`<div class="note-mini">${safeText(r.notes)}</div>`:""}
+      </div>
+      <div class="mini-actions">
+        <button class="btn-ghost" type="button" onclick="editGolf('${r.id}')">✏️</button>
+        <button class="btn-ghost danger" type="button" onclick="deleteGolf('${r.id}')">🗑</button>
+      </div>`;
+    root.appendChild(el);
+  }
+}
+
+function makeTrendData(list){
+  const rows=[...list].sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const labels=rows.map(r=>r.date);
+  const strokes=rows.map(r=>r.strokes);
+  const points=rows.map(r=> (r.points==null? null : r.points));
+  return {labels, strokes, points};
+}
+
+function buildDistribution(list){
+  const sum = { db:0, b:0, p:0, bi:0, e:0 };
+  for(const r of list){
+    sum.db += Number(r.double_bogey||0);
+    sum.b  += Number(r.bogey||0);
+    sum.p  += Number(r.par||0);
+    sum.bi += Number(r.birdie||0);
+    sum.e  += Number(r.eagle||0);
+  }
+  return sum;
+}
+
+function renderGolfCharts(list){
+  const trendCanvas = document.getElementById("chartGolfTrend");
+  const distCanvas  = document.getElementById("chartGolfDist");
+  if(!trendCanvas || !distCanvas || !window.Chart) return;
+
+  const {labels, strokes, points} = makeTrendData(list);
+  const dist = buildDistribution(list);
+
+  if(gStatHint){
+    const n=list.length;
+    const avgStrokes = n? (strokes.reduce((a,b)=>a+(b||0),0)/n).toFixed(1) : "—";
+    const avgPoints  = n? (list.reduce((a,r)=>a+(r.points==null?0:r.points),0)/n).toFixed(1) : "—";
+    gStatHint.innerHTML = n ? `Rundor: <b>${n}</b> · Snitt slag: <b>${avgStrokes}</b> · Snitt poäng: <b>${avgPoints}</b>` : "—";
+  }
+
+  if(chartGolfTrend) chartGolfTrend.destroy();
+  chartGolfTrend = new Chart(trendCanvas,{
+    type:"line",
+    data:{
+      labels: labels.length? labels : ["—"],
+      datasets:[
+        {
+          label:"Slag",
+          data: strokes.length? strokes : [null],
+          borderColor:"rgba(255,159,64,0.92)",
+          backgroundColor:"rgba(255,159,64,0.10)",
+          pointBackgroundColor:"rgba(255,159,64,0.95)",
+          pointBorderColor:"rgba(13,15,28,1)",
+          pointBorderWidth:2,
+          pointRadius:3,
+          tension:0.35,
+          fill:true
+        },
+        {
+          label:"Poäng",
+          data: points.length? points : [null],
+          borderColor:"rgba(0,255,200,0.35)",
+          backgroundColor:"rgba(0,255,200,0.05)",
+          pointBackgroundColor:"rgba(0,255,200,0.45)",
+          pointRadius:2,
+          tension:0.35,
+          fill:false
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:"index", intersect:false},
+      plugins:{
+        legend:{ labels:{ color:"rgba(123,132,184,0.9)", font:{size:11,weight:"600"}, usePointStyle:true, pointStyle:"circle", boxWidth:8, boxHeight:8, padding:16 } },
+        tooltip:{ backgroundColor:"rgba(7,8,15,0.96)", borderColor:"rgba(99,102,241,0.18)", borderWidth:1, titleColor:"rgba(232,234,248,0.95)", bodyColor:"rgba(123,132,184,0.9)", padding:13, cornerRadius:12 }
+      },
+      scales:{
+        x:{ grid:{color:"rgba(99,102,241,0.06)"}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)", maxTicksLimit:8} },
+        y:{ beginAtZero:false, grid:{color:"rgba(99,102,241,0.07)"}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)"} }
+      }
+    }
+  });
+
+  if(chartGolfDist) chartGolfDist.destroy();
+  chartGolfDist = new Chart(distCanvas,{
+    type:"bar",
+    data:{
+      labels:["Dubbelbogey","Bogey","Par","Birdie","Eagle"],
+      datasets:[{
+        label:"Totalt (summa)",
+        data:[dist.db, dist.b, dist.p, dist.bi, dist.e],
+        backgroundColor:"rgba(167,139,250,0.55)",
+        borderColor:"rgba(167,139,250,0.85)",
+        borderWidth:1,
+        borderRadius:8
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ grid:{color:"rgba(99,102,241,0.06)"}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)"} },
+        y:{ beginAtZero:true, grid:{color:"rgba(99,102,241,0.07)"}, border:{display:false}, ticks:{color:"rgba(123,132,184,0.65)", maxTicksLimit:5} }
+      }
+    }
+  });
+}
+
+function applyGolfFilter(){
+  const v = gFilterHoles ? gFilterHoles.value : "all";
+  const list = v==="all" ? golfCache : golfCache.filter(r=>String(r.holes)===String(v));
+  renderGolfCharts(list);
+}
+
+if(gFilterHoles){
+  gFilterHoles.addEventListener("change", applyGolfFilter);
+}
+
+async function refreshGolf(){
+  // Only refresh if elements exist (they do), and user exists
+  try{
+    const rows = await fetchGolf();
+    golfCache = rows;
+    renderGolf(rows);
+    applyGolfFilter();
+  }catch(e){
+    const root=document.getElementById("golfList");
+    if(root){
+      root.innerHTML = `
+        <div class="empty-state" style="margin:0; padding:18px 14px;">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-title">Golf saknar tabell</div>
+          <div class="empty-state-sub">${safeText(e?.message||"Skapa tabellen 'golf_rounds' i Supabase.")}</div>
+        </div>`;
+    }
+  }
+}
+
+window.deleteGolf = async function(id){
+  if(!confirm("Radera runda?")) return;
+  try{
+    const { error } = await sb.from("golf_rounds").delete().eq("id", id).eq("user_id", window.currentUser.id);
+    if(error) throw error;
+    setGolfMsg("Runda raderad ✓");
+    refreshGolf();
+  }catch(e){ setGolfMsg(e?.message||"Kunde inte radera", true); }
+}
+
+window.editGolf = async function(id){
+  try{
+    const { data, error } = await sb.from("golf_rounds").select("*").eq("id", id).eq("user_id", window.currentUser.id).single();
+    if(error) throw error;
+
+    document.getElementById("gDate").value = data.date || "";
+    document.getElementById("gCourse").value = data.course || "";
+    document.getElementById("gHoles").value = String(data.holes || 18);
+    document.getElementById("gStrokes").value = data.strokes ?? "";
+    document.getElementById("gPoints").value = data.points ?? "";
+    document.getElementById("gDoubleBogey").value = data.double_bogey ?? 0;
+    document.getElementById("gBogey").value = data.bogey ?? 0;
+    document.getElementById("gPar").value = data.par ?? 0;
+    document.getElementById("gBirdie").value = data.birdie ?? 0;
+    document.getElementById("gEagle").value = data.eagle ?? 0;
+    document.getElementById("gWeather").value = data.weather || "";
+    document.getElementById("gNotes").value = data.notes || "";
+
+    const form=document.getElementById("golfForm");
+    form.dataset.editId = data.id;
+    document.getElementById("gSubmit").textContent = "Uppdatera runda";
+    setGolfMsg("Redigerar runda…");
+  }catch(e){ setGolfMsg(e?.message||"Kunde inte hämta", true); }
+}
+
+const golfForm = document.getElementById("golfForm");
+if(golfForm){
+  golfForm.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    setGolfMsg("");
+    const payload = {
+      user_id: window.currentUser.id,
+      date: document.getElementById("gDate").value,
+      course: document.getElementById("gCourse").value.trim(),
+      holes: Number(document.getElementById("gHoles").value),
+      strokes: Number(document.getElementById("gStrokes").value),
+      points: document.getElementById("gPoints").value==="" ? null : Number(document.getElementById("gPoints").value),
+      double_bogey: Number(document.getElementById("gDoubleBogey").value)||0,
+      bogey: Number(document.getElementById("gBogey").value)||0,
+      par: Number(document.getElementById("gPar").value)||0,
+      birdie: Number(document.getElementById("gBirdie").value)||0,
+      eagle: Number(document.getElementById("gEagle").value)||0,
+      weather: document.getElementById("gWeather").value.trim() || null,
+      notes: document.getElementById("gNotes").value.trim() || null
+    };
+
+    if(!payload.date || !payload.course || !isFinite(payload.strokes) || payload.strokes<=0){
+      setGolfMsg("Fyll i datum, bana och antal slag.", true); return;
+    }
+
+    const editId=golfForm.dataset.editId || null;
+
+    try{
+      let error;
+      if(editId){
+        ({ error } = await sb.from("golf_rounds").update(payload).eq("id", editId).eq("user_id", window.currentUser.id));
+      } else {
+        ({ error } = await sb.from("golf_rounds").insert(payload));
+      }
+      if(error) throw error;
+
+      golfForm.reset();
+      delete golfForm.dataset.editId;
+      document.getElementById("gDoubleBogey").value = 0;
+      document.getElementById("gBogey").value = 0;
+      document.getElementById("gPar").value = 0;
+      document.getElementById("gBirdie").value = 0;
+      document.getElementById("gEagle").value = 0;
+      document.getElementById("gHoles").value = "18";
+      document.getElementById("gSubmit").textContent = "Spara runda";
+
+      setGolfMsg(editId ? "Runda uppdaterad ✓" : "Runda sparad ✓");
+      refreshGolf();
+    }catch(e){ setGolfMsg(e?.message||"Kunde inte spara", true); }
+  });
+}
+
+
+updateSportUI();
+
+// ── Expose handlers for inline onclick
+try {
+  if (typeof deleteActivity === "function") window.deleteActivity = deleteActivity;
+  if (typeof editActivity === "function") window.editActivity = editActivity;
+  if (typeof deletePR === "function") window.deletePR = deletePR;
+  if (typeof editPR === "function") window.editPR = editPR;
+  if (typeof deleteRace === "function") window.deleteRace = deleteRace;
+  if (typeof editRace === "function") window.editRace = editRace;
+  if (typeof deleteGolf === "function") window.deleteGolf = deleteGolf;
+  if (typeof editGolf === "function") window.editGolf = editGolf;
+} catch (e) { console.error(e); }
+
+
+/* ───────── Mobile Nav Wiring ───────── */
+
+(function(){
+  const mDash = document.getElementById("mDash");
+  const mLogg = document.getElementById("mLogg");
+  const mGolf = document.getElementById("mGolf");
+
+  const tabDash = document.getElementById("tabDash");
+  const tabLogg = document.getElementById("tabLogg");
+  const tabGolf = document.getElementById("tabGolf");
+
+  function syncMobile(){
+    const active = document.querySelector(".nav-tab.active");
+    if(!active) return;
+    [mDash, mLogg, mGolf].forEach(b=>b?.classList.remove("active"));
+    if(active.id==="tabDash") mDash?.classList.add("active");
+    if(active.id==="tabLogg") mLogg?.classList.add("active");
+    if(active.id==="tabGolf") mGolf?.classList.add("active");
+  }
+
+  mDash?.addEventListener("click", ()=> tabDash?.click());
+  mLogg?.addEventListener("click", ()=> tabLogg?.click());
+  mGolf?.addEventListener("click", ()=> tabGolf?.click());
+
+  document.addEventListener("click", ()=> setTimeout(syncMobile,50));
+  syncMobile();
+})();
+
+
+
+/* ───────── Expose tab switching for mobile nav ───────── */
+try{
+  if(typeof setActiveTab === "function"){
+    window.goTab = (which)=>{
+      setActiveTab(which);
+      // sync active state on mobile buttons
+      const mDash=document.getElementById("mDash");
+      const mLogg=document.getElementById("mLogg");
+      const mGolf=document.getElementById("mGolf");
+      [mDash,mLogg,mGolf].forEach(b=>b?.classList.remove("active"));
+      if(which==="dash") mDash?.classList.add("active");
+      if(which==="logg") mLogg?.classList.add("active");
+      if(which==="golf") mGolf?.classList.add("active");
+    };
+  }
+}catch(e){ console.error(e); }
+
+restoreFilters();
+
+if(logYearFilter) logYearFilter.addEventListener("change", ()=>{ rememberFilters(); renderLatestList(applyLogFilters(__allActivitiesCache)); });
+if(logMonthFilter) logMonthFilter.addEventListener("change", ()=>{ rememberFilters(); renderLatestList(applyLogFilters(__allActivitiesCache)); });
+if(btnClearLogFilters) btnClearLogFilters.addEventListener("click", ()=>{ if(logYearFilter) logYearFilter.value="all"; if(logMonthFilter) logMonthFilter.value="all"; rememberFilters(); renderLatestList(__allActivitiesCache); });
+
+if(raceYearFilter) raceYearFilter.addEventListener("change", ()=>{ rememberFilters(); renderRaces(applyRaceFilters(__allRacesCache)); });
+if(btnClearRaceFilter) btnClearRaceFilter.addEventListener("click", ()=>{ if(raceYearFilter) raceYearFilter.value="all"; rememberFilters(); renderRaces(__allRacesCache); });
+window.openAnalyze = async function(id){
+  try{
+    if(!window.currentUser){ setMessage("Logga in.", true); return; }
+
+    const modal = document.getElementById("analyzeModal");
+    const content = document.getElementById("analyzeContent");
+    if(!modal || !content){ alert("Analyspanel saknas i HTML."); return; }
+
+    // öppna direkt med laddningstext
+    content.innerHTML = '<div class="empty-state" style="margin:0;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Laddar…</div><div class="empty-state-sub">Hämtar passdata</div></div>';
+    modal.classList.add("open");
+
+    const { data, error } = await sb.from("activities")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", window.currentUser.id)
+      .single();
+
+    if(error) throw error;
+
+    const when = data.start_time ? new Date(data.start_time) : null;
+    const wt = when ? `${when.toLocaleDateString("sv-SE")} ${when.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}` : "-";
+
+    const dist = formatDistance(data.distance_m);
+    const dur  = formatDuration(data.duration_s);
+    const pace = calcPace(data.duration_s, data.distance_m);
+
+    const avgHr = (data.avg_hr ?? null);
+    const maxHr = (data.max_hr ?? null);
+    const elev  = (data.elevation_m ?? null);
+    const cals  = (data.calories ?? null);
+
+    const fmtInt = (v, suffix="") => (v === null || v === undefined || v === "" ? "-" : `${Math.round(Number(v))}${suffix}`);
+
+    
+    const existingFile = (data.raw && data.raw.file) ? data.raw.file : null;
+    const fileLabel = existingFile
+      ? `Kopplad fil: ${safeText(existingFile.name || existingFile.original_name || existingFile.path || "fil")}`
+      : "Ingen fil kopplad ännu.";
+const chips = [
+      { icon: "🛣️", text: dist || "-" },
+      { icon: "⏱️", text: dur || "-" },
+      { icon: "⚡", text: pace || "-" },
+      { icon: "📈", text: (data.training_load ?? null) !== null && (data.training_load ?? null) !== undefined ? `TL ${data.training_load}` : "TL -" },
+      { icon: "❤", text: avgHr !== null && avgHr !== undefined ? `${fmtInt(avgHr)} bpm` : "- bpm" },
+      { icon: "💥", text: maxHr !== null && maxHr !== undefined ? `${fmtInt(maxHr)} bpm` : "- bpm" },
+    ].filter(Boolean);
+
+    const rows = [
+      ["Datum", wt],
+      ["Sport", safeText(data.sport || "-")],
+      ["Höjd (gain)", elev !== null && elev !== undefined ? `${fmtInt(elev)} m` : "-"],
+      ["Kalorier", cals !== null && cals !== undefined ? `${fmtInt(cals)} kcal` : "-"],
+      ["Noter", safeText(data.notes || "-")]
+    ];
+
+    content.innerHTML = `
+      <div class="panel" style="margin:0;">
+        <div class="panel-header">
+          <div class="panel-title">${safeText(data.name || data.sport || "Pass")}</div>
+          <div class="panel-subtitle">${wt} • ${safeText(data.sport || "-")}</div>
+        </div>
+        <div class="panel-body">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 14px;">
+            ${chips.map(c=>`<span class="chip">${c.icon} ${c.text}</span>`).join("")}
+          </div>
+
+          <div style="display:grid; gap:10px;">
+            ${rows.map(([k,v])=>`
+              <div style="display:flex; justify-content:space-between; gap:12px; padding:10px 12px; background: rgba(28,32,58,0.55); border:1px solid rgba(150,160,255,0.14); border-radius: 12px;">
+                <div style="color: var(--muted); font-weight:700; font-size:12px; letter-spacing:0.06em; text-transform:uppercase;">${k}</div>
+                <div style="text-align:right; color: var(--text); font-weight:700; max-width: 60%;">${v}</div>
+              </div>
+            `).join("")}
+          </div>
+
+          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-ghost" type="button" onclick="editActivity('${data.id}')">✏️ Redigera</button>
+            <button class="btn-ghost" type="button" style="border-color:var(--bad); color:var(--bad);" onclick="deleteActivity('${data.id}')">🗑 Radera</button>
+          </div>
+
+          
+          <div style="margin-top:14px; padding:12px; background: rgba(28,32,58,0.45); border: 1px dashed rgba(150,160,255,0.22); border-radius: 14px;">
+            <div style="font-weight:900; margin-bottom:6px;">📎 Koppla GPX/FIT till detta pass</div>
+            <div style="color: var(--muted2); font-size: 12px; margin-bottom: 10px;">${fileLabel}</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <input id="analyzeFileInput" type="file" accept=".gpx,.fit,.tcx" style="flex:1; min-width: 220px; padding:10px 12px; border-radius: 12px; border:1px solid rgba(150,160,255,0.18); background: rgba(12,14,24,0.55); color: var(--text);" />
+              <button class="btn-ghost" type="button" onclick="uploadAnalyzeFile('${data.id}')">⬆️ Ladda upp</button>
+              <span id="analyzeUploadMsg" style="color: var(--muted2); font-size: 12px;"></span>
+            </div>
+            <div style="margin-top:10px; color: var(--muted2); font-size: 12px;">
+              Tips: GPX ger nästan alltid karta. FIT ger ofta puls och mer sensordata.
+            </div>
+
+          <div id="fitProcessBox" style="margin-top:14px; padding:12px; background: rgba(28,32,58,0.45); border: 1px solid rgba(150,160,255,0.18); border-radius: 14px;">
+            <div style="font-weight:900; margin-bottom:6px;">🧠 Bearbeta fil för karta & kurvor</div>
+            <div style="color: var(--muted2); font-size: 12px; margin-bottom: 10px;">
+              När du har kopplat en FIT-fil kan du bearbeta den här för att skapa kartdata (GPS) och pulsserie.
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <button class="btn-ghost" type="button" onclick="processAnalyzeFile('${data.id}')">⚙️ Bearbeta nu</button>
+              <span id="processFitMsg" style="color: var(--muted2); font-size: 12px;"></span>
+            </div>
+          </div>
+
+          <div id="analyzeMapWrap" style="margin-top:14px; display:none;">
+            <div style="font-weight:900; margin-bottom:8px;">🗺️ Karta</div>
+            <div id="analyzeMap" style="height:260px; border-radius:14px; overflow:hidden; border:1px solid rgba(150,160,255,0.18);"></div>
+          </div>
+
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    _analyzeCurrentId = Number(data.id);
+    const series = await fetchActivitySeries(Number(data.id));
+    renderAnalyzeMap(series);
+  }catch(e){
+    const content = document.getElementById("analyzeContent");
+    if(content) content.innerHTML = '<div class="empty-state" style="margin:0;"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Kunde inte öppna</div><div class="empty-state-sub">'+safeText(e?.message||"Fel")+'</div></div>';
+  }
+};
+
+
+// ── Upload GPX/FIT kopplat till ett pass ─────────────────────────────────────
+window.uploadAnalyzeFile = async function(activityId){
+  try{
+    if(!window.currentUser){ setMessage("Logga in.", true); return; }
+
+    const input = document.getElementById("analyzeFileInput");
+    const msgEl = document.getElementById("analyzeUploadMsg");
+    const setMsg = (t, isErr=false)=>{
+      if(msgEl){
+        msgEl.textContent = t || "";
+        msgEl.style.color = isErr ? "var(--bad)" : "var(--muted2)";
+      }
+    };
+
+    if(!input || !input.files || input.files.length === 0){
+      setMsg("Välj en fil först.", true);
+      return;
+    }
+
+    const file = input.files[0];
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if(!["gpx","fit","tcx"].includes(ext)){
+      setMsg("Endast GPX, FIT eller TCX.", true);
+      return;
+    }
+
+    setMsg("Laddar upp…");
+
+    // OBS: Du behöver ha en bucket i Supabase Storage som heter 'activity-files'.
+    // Skapa den i Dashboard → Storage → New bucket. (Private räcker.)
+    const bucket = "activity-files";
+    const ts = new Date().toISOString().replace(/[:.]/g,"-");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    const path = `${window.currentUser.id}/${activityId}/${ts}_${safeName}`;
+
+    const { error: upErr } = await sb.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type || undefined });
+    if(upErr) throw upErr;
+
+    // Hämta befintlig raw för att inte råka skriva över andra nycklar
+    const { data: current, error: readErr } = await sb.from("activities")
+      .select("raw")
+      .eq("id", activityId)
+      .eq("user_id", window.currentUser.id)
+      .single();
+    if(readErr) throw readErr;
+
+    const raw = (current && current.raw) ? current.raw : {};
+    const newRaw = {
+      ...raw,
+      file: {
+        bucket,
+        path,
+        name: safeName,
+        original_name: file.name,
+        type: ext,
+        size: file.size,
+        uploaded_at: new Date().toISOString()
+      }
+    };
+
+    const { error: writeErr } = await sb.from("activities")
+      .update({ raw: newRaw })
+      .eq("id", activityId)
+      .eq("user_id", window.currentUser.id);
+    if(writeErr) throw writeErr;
+
+    setMsg("Uppladdat ✓");
+    // uppdatera vy
+    await window.openAnalyze(activityId);
+  }catch(e){
+    const msg = (e && e.message) ? e.message : "Uppladdning misslyckades";
+    const msgEl = document.getElementById("analyzeUploadMsg");
+    if(msgEl){
+      msgEl.textContent = msg;
+      msgEl.style.color = "var(--bad)";
+    }else{
+      setMessage(msg, true);
+    }
+  }
+};
+
+
+window.closeAnalyze = function(){
+  const modal = document.getElementById("analyzeModal");
+  if(modal) modal.classList.remove("open");
+};
+
+// stäng på ESC + klick utanför
+document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") window.closeAnalyze(); });
+document.addEventListener("click", (e)=>{
+  const modal = document.getElementById("analyzeModal");
+  if(!modal || !modal.classList.contains("open")) return;
+  if(e.target === modal) window.closeAnalyze();
+});
+
+
+window.editActivity = async function(id){
+  try{
+    const { data, error } = await sb.from("activities")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", window.currentUser.id)
+      .single();
+
+    if(error) throw error;
+
+    // Växla till dashboard + visa formulär
+    setActiveTab("dash");
+
+    // Fyll formuläret
+    hiddenStart.value = new Date(data.start_time).toISOString().slice(0,16);
+    document.getElementById("sport").value = data.sport;
+    updateSportUI();
+    document.getElementById("name").value = data.name || "";
+    document.getElementById("notes").value = data.notes || "";
+
+    if(data.duration_s){
+      document.getElementById("duration_h").value = Math.floor(data.duration_s/3600);
+      document.getElementById("duration_min").value = Math.floor((data.duration_s%3600)/60);
+    } else {
+      document.getElementById("duration_h").value = "";
+      document.getElementById("duration_min").value = "";
+    }
+
+    if(data.distance_m){
+      document.getElementById("distance_km").value = (data.distance_m/1000).toFixed(2);
+    } else {
+      document.getElementById("distance_km").value = "";
+    }
+
+    // Ändra knapp till "Uppdatera"
+    form.dataset.editId = id;
+    form.querySelector("button[type=submit]").textContent = "Uppdatera pass";
+
+    // Uppdatera datumvisning
+    const pad = n => String(n).padStart(2, "0");
+    const dt = new Date(data.start_time);
+    dateDisplayText.textContent = `${dt.toLocaleDateString("sv-SE")}  ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    dateDisplayText.classList.remove("placeholder");
+
+  }catch(e){
+    setMessage(e?.message || "Kunde inte hämta pass", true);
+  }
+}
+
+function updateStatsForYear(b){
+  const ts=b["Löpning"].counts.reduce((a,v)=>a+v,0)+b["Styrketräning"].counts.reduce((a,v)=>a+v,0);
+  const th=b["Löpning"].hours.reduce((a,v)=>a+v,0)+b["Styrketräning"].hours.reduce((a,v)=>a+v,0);
+  const rk=b["Löpning"].runKm.reduce((a,v)=>a+v,0);
+  statTotalSessions.textContent=ts.toString();
+  statTotalHours.innerHTML=`${Math.round(th*10)/10}<span class="stat-unit">tim</span>`;
+  statRunKm.innerHTML=`${Math.round(rk*10)/10}<span class="stat-unit">mil</span>`;
+}
+
+const formRow = document.querySelector(".top-form-row");
+
+function setActiveTab(which){
+  const isDash = which==="dash";
+  const isLogg = which==="logg";
+  const isGolf = which==="golf";
+  tabDash.classList.toggle("active", isDash);
+  tabLogg.classList.toggle("active", isLogg);
+  if(tabGolf) tabGolf.classList.toggle("active", isGolf);
+  viewDash.classList.toggle("active", isDash);
+  viewLogg.classList.toggle("active", isLogg);
+  if(viewGolf) viewGolf.classList.toggle("active", isGolf);
+  // Show activity form only on dashboard
+  if(formRow) formRow.classList.toggle("hidden", !isDash);
+  // Lazy-load golf when opening tab
+  if(isGolf) refreshGolf();
+}
+tabDash.addEventListener("click",()=>setActiveTab("dash"));
+tabLogg.addEventListener("click",()=>setActiveTab("logg"));
+if(tabGolf) tabGolf.addEventListener("click",()=>setActiveTab("golf"));
+
+async function refresh(){
+  setMessage("");
+  try{
+    const all=await fetchAllActivities();
+    ensureYearOptions(all); setSummary(all);
+    const year=Number(yearSelect.value)||new Date().getFullYear();
+    pillYear.textContent=`År: ${year}`; subYear.textContent=`Valt år: ${year}`;
+    const b=buildYearBuckets(all,year);
+    updateStatsForYear(b);
+
+    chartRun=makeChart("chartRun",b["Löpning"].runKm,b["Löpning"].hours,{
+      bar:a=>`rgba(99,102,241,${a})`, line:"rgba(129,140,248,0.95)",
+      area:(ctx)=>{ const g=ctx.chart.ctx.createLinearGradient(0,0,0,ctx.chart.height); g.addColorStop(0,"rgba(99,102,241,0.28)"); g.addColorStop(1,"rgba(99,102,241,0)"); return g; }
+    },chartRun);
+
+    const wl = buildWeeklyLoad(all, year);
+    chartRunLoad = makeWeeklyLoadChart("chartRunLoad", wl, chartRunLoad);
+
+    chartStrength=makeHoursBarChart("chartStrength",b["Styrketräning"].hours,{
+      bar:a=>`rgba(59,130,246,${a})`
+    },chartStrength);
+
+    __allActivitiesCache = all;
+    restoreFilters();
+    populateLogFilterOptions(__allActivitiesCache);
+    renderLatestList(applyLogFilters(__allActivitiesCache));
+// Also refresh golf cache (safe even if tab not open)
+    try{ await refreshGolf(); }catch(_e){}
+    await loadPRs();
+    await loadRaces();
+  } catch(e){
+    activitiesDiv.className=""; activitiesDiv.innerHTML=`<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Kunde inte ladda data</div><div class="empty-state-sub">${e?.message||"Okänt fel"}</div></div>`;
+    setMessage(e?.message||"Okänt fel",true);
+  }
+}
+
+reloadBtn.addEventListener("click",refresh);
+yearSelect.addEventListener("change",refresh);
+
+form.addEventListener("submit",async(e)=>{
+  if(!window.currentUser){ setMessage("Logga in.", true); return; }
+  e.preventDefault();
+  setMessage("");
+
+  const editId = form.dataset.editId || null;
+
+  const st = hiddenStart.value;
+  if(!st){ setMessage("Välj datum.", true); return; }
+
+  const sport = document.getElementById("sport").value;
+  const name  = document.getElementById("name").value.trim()  || null;
+  const notes = document.getElementById("notes").value.trim() || null;
+
+  const hRaw = document.getElementById("duration_h").value;
+  const mRaw = document.getElementById("duration_min").value;
+
+  const h = hRaw ? Math.max(0, Number(hRaw)) : 0;
+  const m = mRaw ? Math.max(0, Number(mRaw)) : 0;
+
+  if(mRaw && Number(mRaw) > 59){ setMessage("Minuter måste vara 0–59.", true); return; }
+
+  const duration_s = (h || m) ? (Math.floor(h)*3600 + Math.floor(m)*60) : null;
+
+  const isRun = sport === "Löpning";
+
+  const dkr = document.getElementById("distance_km").value;
+  const distance_m = (isRun && dkr) ? (Number(dkr) * 1000) : null;
+
+  const payload = {
+    user_id: window.currentUser.id,
+    start_time: new Date(st).toISOString(),
+    sport,
+    name,
+    duration_s,
+    distance_m,
+    training_load: (document.getElementById("training_load")?.value === "" ? null : Number(document.getElementById("training_load")?.value)),
+    notes
+  };
+
+  try{
+    let error;
+
+    if(editId){
+      ({ error } = await sb.from("activities").update(payload).eq("id", editId).eq("user_id", window.currentUser.id));
+    } else {
+      payload.source = "manual";
+      ({ error } = await sb.from("activities").insert(payload));
+    }
+
+    if(error) throw error;
+
+    // Reset
+    form.reset();
+    hiddenStart.value = "";
+    calSelected = null;
+
+    delete form.dataset.editId;
+    form.querySelector("button[type=submit]").textContent = "Spara pass";
+
+    dateDisplayText.textContent = "Välj datum…";
+    dateDisplayText.classList.add("placeholder");
+
+    setMessage(editId ? "Pass uppdaterat ✓" : "✓ Sparat!");
+    refresh();
+  } catch(e2){
+    setMessage(e2?.message || (editId ? "Kunde inte uppdatera" : "Kunde inte spara"), true);
+  }
+});
+
+
+
+refresh();
+
+})();
+</script>
+
+  <div id="errBanner" class="status-pill danger" style="position:fixed; left:16px; bottom:16px; z-index:9999; display:none; max-width: calc(100vw - 32px); white-space:normal; line-height:1.35; padding:10px 12px;"></div>
+
+
+<div class="mobile-nav">
+  <button id="mDash" type="button" onclick="window.goTab && window.goTab('dash')">🏠<span>Dashboard</span></button>
+  <button id="mLogg" type="button" onclick="window.goTab && window.goTab('logg')">📒<span>Logg</span></button>
+  <button id="mGolf" type="button" onclick="window.goTab && window.goTab('golf')">⛳<span>Golf</span></button>
+</div>
+
+
+<div id="analyzeModal" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-top">
+      <div class="modal-title">Analys</div>
+      <button class="btn-ghost" type="button" onclick="closeAnalyze()">✕</button>
+    </div>
+    <div id="analyzeContent" class="modal-body"></div>
+  </div>
+</div>
+
+</body>
+</html>
