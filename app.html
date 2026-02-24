@@ -3660,6 +3660,37 @@ refresh();
   }
 })();
 </script>
+window.processAnalyzeFile = async function(activityId) {
 
+  const msg = document.getElementById("processFitMsg");
+  if (msg) msg.textContent = "Bearbetar...";
+
+  if (!window.sb) {
+    if (msg) msg.textContent = "Supabase saknas.";
+    return;
+  }
+
+  try {
+
+    const { data, error } = await window.sb.functions.invoke("process-fit", {
+      body: { activity_id: Number(activityId) }
+    });
+
+    if (error) {
+      if (msg) msg.textContent = "Fel: " + error.message;
+      return;
+    }
+
+    if (msg) msg.textContent = "Klar ✓";
+
+    if (typeof loadActivitySeries === "function") {
+      loadActivitySeries(activityId);
+    }
+
+  } catch (err) {
+    if (msg) msg.textContent = "JS-fel: " + err.message;
+  }
+};
+</script>
 </body>
 </html>
