@@ -3659,6 +3659,95 @@ refresh();
     renderPlans();
   }
 })();
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<script>
+const SUPABASE_URL = "https://pmstnkmloyipsrveqidg.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtc3Rua21sb3lpcHNydmVxaWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNjQ2NDIsImV4cCI6MjA4Njg0MDY0Mn0.88Ly-FOwb_RFqsDvfRl7As02mQ8PDZNRcVBI4LzZuRU";
+
+window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+window.processAnalyzeFile = async function(activityId) {
+
+  const msg = document.getElementById("processFitMsg");
+  if (msg) msg.textContent = "Bearbetar...";
+
+  try {
+
+    const { error } = await window.sb.functions.invoke("process-fit", {
+      body: { activity_id: Number(activityId) }
+    });
+
+    if (error) {
+      if (msg) msg.textContent = "Fel: " + error.message;
+      return;
+    }
+
+    if (msg) msg.textContent = "Klar ✓";
+
+    loadActivitySeries(activityId);
+
+  } catch (err) {
+    if (msg) msg.textContent = "JS-fel: " + err.message;
+  }
+};
+
+async function loadActivitySeries(activityId) {
+
+  const { data, error } = await window.sb
+    .from("activity_series")
+    .select("series")
+    .eq("activity_id", activityId)
+    .single();
+
+  if (error || !data) {
+    console.error(error);
+    return;
+  }
+
+  drawChart(data.series);
+}
+
+let chartInstance = null;
+
+function drawChart(series) {
+
+  const canvas = document.getElementById("analysisChart");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: series.t,
+      datasets: [
+        {
+          label: "Puls",
+          data: series.hr,
+          borderColor: "#ff4d6d",
+          tension: 0.2
+        },
+        {
+          label: "Fart",
+          data: series.speed || [],
+          borderColor: "#4dabf7",
+          tension: 0.2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: {
+        mode: "index",
+        intersect: false
+      }
+    }
+  });
+}
+</script>
 </body>
 </html>
