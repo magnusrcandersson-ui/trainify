@@ -1081,7 +1081,7 @@ pre, code { white-space: pre-wrap; word-break: break-word; }
           </div>
 <div class="row2" id="loadFieldRow" style="margin-top:10px; display:flex; gap:12px;">
             <div class="field" id="hrField" style="flex:1;">
-              <label class="field-label" for="avg_hr">Medelpuls (valfritt)</label>
+              <label class="field-label" for="avg_hr">Medel (valfritt)</label>
               <input type="number" id="avg_hr" min="0" step="1" placeholder="t.ex. 145" inputmode="numeric" />
             </div>
             <div class="field" id="loadField" style="flex:1;">
@@ -2953,7 +2953,7 @@ const chips = [
 
 <div style="margin-top:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <div style="font-weight:900;">🫀 Puls</div>
+              <div style="font-weight:900;">🫀 </div>
               <div id="hrStats" style="color:var(--muted2); font-size:12px;"></div>
             </div>
             <div style="padding:10px 12px; border-radius:14px; border:1px solid rgba(150,160,255,0.18); background: rgba(12,14,24,0.35);">
@@ -3509,22 +3509,37 @@ refresh();
   if(typeof window.processAnalyzeFile === "function" && typeof window.processAnalyzeFile !== "undefined"){
     window.processAnalyzeFile = window.processAnalyzeFile;
   }
-  if(typeof window.processAnalyzeFile !== "function" && typeof window.processAnalyzeFile === "undefined"){
-    // fallback wrapper if code uses window.processAnalyzeFile elsewhere
-    window.processAnalyzeFile = async function(activityId){
-      const msg = document.getElementById("processFitMsg");
-      if(msg) msg.textContent = "Bearbetar…";
+  window.processAnalyzeFile = async function (activityId) {
+  try {
 
-      const sb = window.sb;
-      if(!sb){
-        if(msg) msg.textContent = "Fel: Supabase-klient saknas.";
-        return;
-      }
+    const { data, error } = await supabase
+      .from("activity_series")
+      .select("series")
+      .eq("activity_id", activityId)
+      .single();
 
-      try{
-        const { data, error } = await sb.functions.invoke("process-fit", {
-          body: { activity_id: Number(activityId) }
-        });
+    if (error) {
+      console.error("Series error:", error);
+      alert("Kunde inte hämta analysdata");
+      return;
+    }
+
+    if (!data || !data.series) {
+      alert("Ingen analysdata sparad för detta pass");
+      return;
+    }
+
+    const t = data.series.t || [];
+    const hr = data.series.hr || [];
+    const speed = data.series.speed || [];
+
+    openAnalyzeModal(t, hr, speed);
+
+  } catch (err) {
+    console.error("Analyze error:", err);
+    alert("Något gick fel vid analys");
+  }
+};
 
         if(error){
           if(msg) msg.textContent = "Fel: " + (error.message || "okänt fel");
