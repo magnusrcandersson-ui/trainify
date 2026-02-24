@@ -3748,6 +3748,69 @@ function drawChart(series) {
     }
   });
 }
+  // ───────── CLEAN ANALYZE FUNCTION ─────────
+window.processAnalyzeFile = async function(activityId){
+
+  try {
+
+    const { data, error } = await window.sb
+      .from("activity_series")
+      .select("series")
+      .eq("activity_id", Number(activityId))
+      .single();
+
+    if(error || !data || !data.series){
+      alert("Ingen analysdata hittades.");
+      return;
+    }
+
+    const series = data.series;
+    const t  = series.t  || [];
+    const hr = series.hr || [];
+    const speed = series.speed || [];
+
+    const ctx = document.getElementById("analyzeChart");
+    if(!ctx){
+      alert("Graf-element saknas.");
+      return;
+    }
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: t,
+        datasets: [
+          {
+            label: "Puls",
+            data: hr,
+            borderColor: "#ff4d4d",
+            tension: 0.3
+          },
+          {
+            label: "Fart",
+            data: speed,
+            borderColor: "#4da6ff",
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: true }
+        },
+        scales: {
+          x: { title: { display: true, text: "Tid" } },
+          y: { title: { display: true, text: "Värde" } }
+        }
+      }
+    });
+
+  } catch(err){
+    alert("JS-fel: " + err.message);
+  }
+};
 </script>
 </body>
 </html>
